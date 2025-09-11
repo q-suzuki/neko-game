@@ -1,0 +1,336 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+}
+
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* ゲームヘッダー */
+#game-header {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.score-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.score-label, .next-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: bold;
+}
+
+#score {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+
+.next-cat-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#next-cat-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.reset-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.reset-btn {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.reset-btn:active {
+    transform: scale(0.95);
+}
+
+/* キャンバスコンテナ */
+#canvas-container {
+    flex: 1;
+    position: relative;
+    background: #f0f0f0;
+    overflow: hidden;
+}
+
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+}
+
+#drop-line {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    transition: left 0.1s ease-out;
+}
+
+#danger-line {
+    position: absolute;
+    top: 80px;  /* 上部に近い位置（難易度高め） */
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 0, 0, 0.3);
+    border-top: 2px dashed rgba(255, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+/* スタート画面 */
+#start-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+/* スタート画面表示中は最初からボタンを非表示 */
+#start-screen:not([style*="display: none"]) + .reset-btn {
+    display: none;
+}
+
+/* ゲーム開始前はボタンを非表示 */
+.reset-btn {
+    display: none;
+}
+
+.start-content {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 80%;
+}
+
+.start-content h1 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.start-content p {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+#start-btn, #retry-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 18px;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#start-btn:active, #retry-btn:active {
+    transform: scale(0.95);
+}
+
+.instructions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.instructions p {
+    font-size: 14px;
+    color: #999;
+    margin: 5px 0;
+}
+
+/* 難易度選択 */
+.difficulty-selector {
+    margin: 20px 0;
+}
+
+.difficulty-selector h3 {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.difficulty-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.difficulty-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 90px;
+}
+
+.difficulty-btn:active {
+    transform: scale(0.95);
+}
+
+.difficulty-btn.active {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+}
+
+.difficulty-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+
+/* ゲームオーバー画面 */
+#game-over {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+#game-over.hidden {
+    display: none;
+}
+
+.game-over-content {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+}
+
+.game-over-content h2 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.final-score {
+    font-size: 20px;
+    margin-bottom: 30px;
+    color: #666;
+}
+
+#final-score {
+    font-weight: bold;
+    color: #667eea;
+}
+
+/* 猫のスタイル */
+.cat-level-1 { background: #FFE4B5; }
+.cat-level-2 { background: #FFDAB9; }
+.cat-level-3 { background: #FFD700; }
+.cat-level-4 { background: #FFA500; }
+.cat-level-5 { background: #FF8C00; }
+.cat-level-6 { background: #FF6347; }
+.cat-level-7 { background: #FF4500; }
+
+/* アニメーション */
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.bouncing {
+    animation: bounce 0.5s ease-in-out;
+}
+
+/* タブレット対応 */
+@media (min-width: 768px) {
+    #game-container {
+        max-width: 414px;
+        margin: 0 auto;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* 横画面対応 */
+@media (orientation: landscape) and (max-height: 500px) {
+    #game-header {
+        padding: 5px;
+    }
+    
+    .score-label, .next-label {
+        display: none;
+    }
+}
