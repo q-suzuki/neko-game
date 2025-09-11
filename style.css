@@ -11,15 +11,17 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    height: 100vh;
+    /* iOS Safari のアドレスバーで 100vh がずれる問題に対応 */
+    min-height: 100vh;   /* fallback */
+    min-height: 100dvh;  /* dynamic viewport on modern Safari/Chrome */
     overflow: hidden;
-    position: fixed;
-    width: 100%;
 }
 
 #game-container {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    /* ビューポートにフィット。100vh 問題のため min-height を使用 */
+    min-height: 100vh;   /* fallback */
+    min-height: 100dvh;  /* iOS Safari 15.4+ / modern */
     display: flex;
     flex-direction: column;
     position: relative;
