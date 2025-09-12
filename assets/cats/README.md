@@ -4,7 +4,7 @@
 
 ## 画像ファイル名
 
-以下のファイル名で画像を配置してください：
+以下のファイル名で画像を配置してください（11種類対応）：
 
 - `cat1.png` - Lv1: 子猫（最小サイズ）
 - `cat2.png` - Lv2: 普通猫  
@@ -12,7 +12,11 @@
 - `cat4.png` - Lv4: まるまる猫
 - `cat5.png` - Lv5: でっぷり猫
 - `cat6.png` - Lv6: どっしり猫
-- `cat7.png` - Lv7: 巨大猫（最大サイズ）
+- `cat7.png` - Lv7: 巨大猫
+- `cat8.png` - Lv8: 超巨大猫
+- `cat9.png` - Lv9: 究極猫
+- `cat10.png` - Lv10: 神秘猫
+- `cat11.png` - Lv11: 伝説猫（最大サイズ）
 
 ## 推奨画像サイズ
 
@@ -20,13 +24,17 @@
 
 | レベル | ファイル名 | 推奨サイズ |
 |--------|------------|------------|
-| Lv1 | cat1.png | 40×40px |
-| Lv2 | cat2.png | 56×56px |
-| Lv3 | cat3.png | 72×72px |
-| Lv4 | cat4.png | 92×92px |
-| Lv5 | cat5.png | 116×116px |
-| Lv6 | cat6.png | 144×144px |
-| Lv7 | cat7.png | 180×180px |
+| Lv1 | cat1.png | 36×36px |
+| Lv2 | cat2.png | 48×48px |
+| Lv3 | cat3.png | 64×64px |
+| Lv4 | cat4.png | 80×80px |
+| Lv5 | cat5.png | 100×100px |
+| Lv6 | cat6.png | 124×124px |
+| Lv7 | cat7.png | 152×152px |
+| Lv8 | cat8.png | 184×184px |
+| Lv9 | cat9.png | 220×220px |
+| Lv10 | cat10.png | 260×260px |
+| Lv11 | cat11.png | 304×304px |
 
 ## 画像形式
 

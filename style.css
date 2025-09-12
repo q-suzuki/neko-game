@@ -10,106 +10,118 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    /* iOS Safari のアドレスバーで 100vh がずれる問題に対応 */
-    min-height: 100vh;   /* fallback */
-    min-height: 100dvh;  /* dynamic viewport on modern Safari/Chrome */
+    background: linear-gradient(135deg, #f4e4bc 0%, #ddc9a3 100%);
+    height: 100vh;
     overflow: hidden;
+    position: fixed;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 #game-container {
     width: 100%;
-    /* ビューポートにフィット。100vh 問題のため min-height を使用 */
-    min-height: 100vh;   /* fallback */
-    min-height: 100dvh;  /* iOS Safari 15.4+ / modern */
+    height: 100%;
     display: flex;
-    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     position: relative;
 }
 
-/* ゲームヘッダー */
-#game-header {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 10px;
+#game-area {
+    width: min(400px, 100%);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* 上部UI */
+#top-ui {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    z-index: 10;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 0 10px;
 }
 
-.score-container {
+.ui-circle {
+    background: rgba(255, 255, 255, 0.9);
+    border: 3px solid rgba(139, 69, 19, 0.3);
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
 }
 
-.score-label, .next-label {
-    font-size: 12px;
-    color: #666;
+.ui-label {
+    font-size: 10px;
+    color: #8b4513;
     font-weight: bold;
+    margin-bottom: 2px;
+    text-align: center;
+    line-height: 1;
 }
 
-#score {
-    font-size: 24px;
+.score-circle #score,
+.score-circle #best-score {
+    font-size: 16px;
     font-weight: bold;
     color: #333;
+    line-height: 1;
 }
 
-.next-cat-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-#next-cat-preview {
-    width: 40px;
-    height: 40px;
+.next-circle #next-cat-preview {
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
-    margin-top: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
+    margin-top: 2px;
 }
 
-.reset-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.reset-btn {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    font-size: 14px;
-    border-radius: 20px;
-    font-weight: bold;
+.control-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: 3px solid rgba(139, 69, 19, 0.3);
     cursor: pointer;
-    touch-action: manipulation;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 24px;
     transition: all 0.2s ease;
 }
 
-.reset-btn:active {
+.control-btn:active {
     transform: scale(0.95);
 }
 
-/* キャンバスコンテナ */
-#canvas-container {
-    flex: 1;
+/* ゲームボックス */
+#game-box {
+    background: linear-gradient(to bottom, #deb887 0%, #cd853f 15%, #f5deb3 100%);
+    border: 4px solid #8b4513;
+    border-radius: 20px;
     position: relative;
-    background: #f0f0f0;
+    aspect-ratio: 3/4;
+    max-height: 60vh;
     overflow: hidden;
+    box-shadow: 
+        inset 0 4px 8px rgba(0, 0, 0, 0.1),
+        0 8px 16px rgba(0, 0, 0, 0.2);
 }
+
 
 #game-canvas {
     width: 100%;
     height: 100%;
     display: block;
     touch-action: none;
+    border-radius: 16px;
 }
 
 #drop-line {
@@ -119,20 +131,22 @@ body {
     transform: translateX(-50%);
     width: 2px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.7);
     pointer-events: none;
     transition: left 0.1s ease-out;
+    border-radius: 1px;
 }
 
 #danger-line {
     position: absolute;
-    top: 80px;  /* 上部に近い位置（難易度高め） */
-    left: 0;
-    right: 0;
+    top: 80px;
+    left: 4px;
+    right: 4px;
     height: 2px;
-    background: rgba(255, 0, 0, 0.3);
-    border-top: 2px dashed rgba(255, 0, 0, 0.5);
+    background: rgba(255, 0, 0, 0.4);
+    border-top: 2px dashed rgba(255, 0, 0, 0.7);
     pointer-events: none;
+    border-radius: 1px;
 }
 
 /* スタート画面 */
@@ -154,8 +168,8 @@ body {
     display: none;
 }
 
-/* ゲーム開始前はボタンを非表示 */
-.reset-btn {
+/* ゲーム開始前はコントロールボタンを非表示 */
+.control-btn {
     display: none;
 }
 
@@ -298,7 +312,7 @@ body {
     color: #667eea;
 }
 
-/* 猫のスタイル */
+/* 猫のスタイル（11レベル対応） */
 .cat-level-1 { background: #FFE4B5; }
 .cat-level-2 { background: #FFDAB9; }
 .cat-level-3 { background: #FFD700; }
@@ -306,6 +320,10 @@ body {
 .cat-level-5 { background: #FF8C00; }
 .cat-level-6 { background: #FF6347; }
 .cat-level-7 { background: #FF4500; }
+.cat-level-8 { background: #DC143C; }
+.cat-level-9 { background: #8B0000; }
+.cat-level-10 { background: #4B0082; }
+.cat-level-11 { background: #FFD700; }
 
 /* アニメーション */
 @keyframes bounce {
@@ -328,11 +346,42 @@ body {
 
 /* 横画面対応 */
 @media (orientation: landscape) and (max-height: 500px) {
-    #game-header {
-        padding: 5px;
+    #top-ui {
+        padding: 2px 5px;
+        gap: 5px;
     }
     
-    .score-label, .next-label {
-        display: none;
+    .ui-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .ui-label {
+        font-size: 8px;
+    }
+    
+    #game-box {
+        max-height: 50vh;
+    }
+}
+
+/* 小さい画面対応 */
+@media (max-width: 400px) {
+    .ui-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .ui-label {
+        font-size: 9px;
+    }
+    
+    .score-circle #score,
+    .score-circle #best-score {
+        font-size: 14px;
+    }
+    
+    .control-btn {
+        font-size: 20px;
     }
 }

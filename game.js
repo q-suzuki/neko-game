@@ -32,6 +32,7 @@ class CatDropGame {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
         this.score = 0;
+        this.bestScore = this.loadBestScore();
         this.gameOver = false;
         this.nextCat = null;
         this.droppingCats = [];
@@ -46,9 +47,13 @@ class CatDropGame {
         
         // UI要素の取得
         this.scoreElement = document.getElementById('score');
+        this.bestScoreElement = document.getElementById('best-score');
         this.nextCatPreview = document.getElementById('next-cat-preview');
         this.gameOverScreen = document.getElementById('game-over');
         this.startScreen = document.getElementById('start-screen');
+        
+        // ベストスコアを表示
+        this.updateBestScoreDisplay();
         
         // タッチコントローラーの初期化
         this.touchController = new TouchController(this.canvas, (x) => this.dropCat(x));
@@ -351,6 +356,28 @@ class CatDropGame {
     addScore(points) {
         this.score += points;
         this.scoreElement.textContent = this.score;
+        
+        // ベストスコア更新チェック
+        if (this.score > this.bestScore) {
+            this.bestScore = this.score;
+            this.saveBestScore();
+            this.updateBestScoreDisplay();
+        }
+    }
+    
+    loadBestScore() {
+        const saved = localStorage.getItem('neko-game-best-score');
+        return saved ? parseInt(saved, 10) : 0;
+    }
+    
+    saveBestScore() {
+        localStorage.setItem('neko-game-best-score', this.bestScore.toString());
+    }
+    
+    updateBestScoreDisplay() {
+        if (this.bestScoreElement) {
+            this.bestScoreElement.textContent = this.bestScore;
+        }
     }
     
     checkGameOver() {
@@ -359,8 +386,12 @@ class CatDropGame {
         const dangerLine = Math.max(difficulty.dangerLineMin, this.canvas.height * difficulty.dangerLinePercent);
         
         for (const cat of this.droppingCats) {
-            // 速度が低い（ほぼ静止している）猫のみチェック
-            const isSettled = Math.abs(cat.velocity.y) < 2;
+            // より厳格な静止判定：速度と角速度の両方をチェック
+            const isSettled = Math.abs(cat.velocity.y) < 0.5 && 
+                             Math.abs(cat.velocity.x) < 0.5 && 
+                             Math.abs(cat.angularVelocity) < 0.1;
+            
+            // 完全に静止した猫のみゲームオーバー判定
             if (isSettled && cat.position.y - cat.circleRadius < dangerLine) {
                 this.endGame();
                 return;
@@ -502,8 +533,8 @@ class CatDropGame {
         document.getElementById('start-btn').addEventListener('click', () => {
             this.startScreen.style.display = 'none';
             this.touchController.enable();
-            // 最初からボタンを表示
-            document.getElementById('reset-btn').style.display = 'block';
+            // リセットボタンを表示
+            document.getElementById('reset-btn').style.display = 'flex';
         });
         
         // リトライボタン

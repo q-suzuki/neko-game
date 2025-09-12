@@ -10,26 +10,31 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- ゲームヘッダー -->
-        <div id="game-header">
-            <div class="score-container">
-                <span class="score-label">スコア</span>
-                <span id="score">0</span>
+        <!-- ゲームエリア全体 -->
+        <div id="game-area">
+            <!-- 上部UI -->
+            <div id="top-ui">
+                <div class="ui-circle score-circle">
+                    <div class="ui-label">ベストスコア</div>
+                    <div id="best-score">0</div>
+                </div>
+                <div class="ui-circle score-circle">
+                    <div class="ui-label">スコア</div>
+                    <div id="score">0</div>
+                </div>
+                <div class="ui-circle next-circle">
+                    <div class="ui-label">ネクスト</div>
+                    <div id="next-cat-preview"></div>
+                </div>
+                <button id="reset-btn" class="ui-circle control-btn">🔄</button>
             </div>
-            <div class="next-cat-container">
-                <span class="next-label">次の猫</span>
-                <div id="next-cat-preview"></div>
-            </div>
-            <div class="reset-container">
-                <button id="reset-btn" class="reset-btn">最初から</button>
-            </div>
-        </div>
 
-        <!-- ゲームキャンバス -->
-        <div id="canvas-container">
-            <canvas id="game-canvas"></canvas>
-            <div id="drop-line"></div>
-            <div id="danger-line"></div>
+            <!-- ゲームボックス -->
+            <div id="game-box">
+                <canvas id="game-canvas"></canvas>
+                <div id="drop-line"></div>
+                <div id="danger-line"></div>
+            </div>
         </div>
 
         <!-- ゲームオーバー画面 -->
