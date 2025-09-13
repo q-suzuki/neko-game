@@ -147,8 +147,8 @@ body {
     background: rgba(255, 255, 255, 0.9);
     border: 3px solid rgba(139, 69, 19, 0.3);
     border-radius: 50%;
-    width: 70px;
-    height: 70px;
+    width: 84px;   /* 以前: 70px */
+    height: 84px;  /* 以前: 70px */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -186,8 +186,8 @@ body {
 }
 
 .next-circle #next-cat-preview {
-    width: 35px;
-    height: 35px;
+    width: 44px;   /* 以前: 35px */
+    height: 44px;  /* 以前: 35px */
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -211,9 +211,23 @@ body {
     transform: scale(0.95);
 }
 
-/* リセットボタン内のアイコン調整（任意） */
+/* リセットボタン内のアイコン調整 */
 #reset-btn .reset-icon {
-    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden; /* 中の画像を丸く切り抜く */
+}
+
+#reset-btn .reset-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* つぎ と同様にトリミングしてフィット */
+    border-radius: 50%;
+    display: block;
 }
 
 /* ゲームボックス */
@@ -479,8 +493,8 @@ body {
     }
     
     .ui-circle {
-        width: 60px;
-        height: 60px;
+        width: 68px;   /* 以前: 60px */
+        height: 68px;  /* 以前: 60px */
     }
     
     .ui-label {
@@ -495,8 +509,8 @@ body {
 /* 小さい画面対応 */
 @media (max-width: 400px) {
     .ui-circle {
-        width: 60px;
-        height: 60px;
+        width: 68px;   /* 以前: 60px */
+        height: 68px;  /* 以前: 60px */
     }
     
     .ui-label {
