@@ -8,12 +8,15 @@
     user-select: none;
 }
 
+html, body { height: 100%; }
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #f4e4bc 0%, #ddc9a3 100%);
-    height: 100vh;
+    background: #f8f8f8; /* 明るいグレー */
+    /* Use viewport height without fixing body to avoid iOS Safari shifts */
+    min-height: 100vh;
     overflow: hidden;
-    position: fixed;
+    position: relative;
     width: 100%;
     margin: 0;
     padding: 20px; /* fallback for non-iOS */
@@ -27,6 +30,8 @@ body {
     justify-content: center;
     align-items: center;
     position: relative;
+    max-width: 440px; /* keep content centered and clamped */
+    margin: 0 auto;
 }
 
 /* 準備中オーバーレイ */
@@ -101,6 +106,11 @@ body {
         padding-top: max(12px, constant(safe-area-inset-top));
         padding-bottom: max(12px, constant(safe-area-inset-bottom));
     }
+}
+
+/* Prefer small viewport on iOS for stable centering if supported */
+@supports (height: 100svh) {
+    body { min-height: 100svh; }
 }
 
 /* 上部UI */
