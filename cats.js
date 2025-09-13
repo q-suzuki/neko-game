@@ -5,7 +5,7 @@ const CAT_DATA = [
         name: '子猫',
         emoji: '🐱',
         image: 'assets/cats/cat1.png',
-        radius: 18,
+        radius: 15,
         color: '#FFE4B5',
         score: 1,
         weight: 4  // 出現頻度の重み
@@ -15,7 +15,7 @@ const CAT_DATA = [
         name: '普通猫',
         emoji: '😺',
         image: 'assets/cats/cat2.png',
-        radius: 24,
+        radius: 20,
         color: '#FFDAB9',
         score: 3,
         weight: 3
@@ -25,7 +25,7 @@ const CAT_DATA = [
         name: 'ふっくら猫',
         emoji: '😸',
         image: 'assets/cats/cat3.png',
-        radius: 32,
+        radius: 27,
         color: '#FFD700',
         score: 6,
         weight: 3
@@ -35,7 +35,7 @@ const CAT_DATA = [
         name: 'まるまる猫',
         emoji: '😹',
         image: 'assets/cats/cat4.png',
-        radius: 40,
+        radius: 33,
         color: '#FFA500',
         score: 10,
         weight: 2
@@ -45,7 +45,7 @@ const CAT_DATA = [
         name: 'でっぷり猫',
         emoji: '😻',
         image: 'assets/cats/cat5.png',
-        radius: 50,
+        radius: 42,
         color: '#FF8C00',
         score: 15,
         weight: 2
@@ -55,7 +55,7 @@ const CAT_DATA = [
         name: 'どっしり猫',
         emoji: '🙀',
         image: 'assets/cats/cat6.png',
-        radius: 62,
+        radius: 52,
         color: '#FF6347',
         score: 21,
         weight: 0  // 合体でのみ出現
@@ -65,7 +65,7 @@ const CAT_DATA = [
         name: '巨大猫',
         emoji: '😾',
         image: 'assets/cats/cat7.png',
-        radius: 76,
+        radius: 63,
         color: '#FF4500',
         score: 28,
         weight: 0  // 合体でのみ出現
@@ -75,7 +75,7 @@ const CAT_DATA = [
         name: '超巨大猫',
         emoji: '😿',
         image: 'assets/cats/cat8.png',
-        radius: 92,
+        radius: 76,
         color: '#DC143C',
         score: 36,
         weight: 0  // 合体でのみ出現
@@ -85,7 +85,7 @@ const CAT_DATA = [
         name: '究極猫',
         emoji: '🐈',
         image: 'assets/cats/cat9.png',
-        radius: 110,
+        radius: 90,
         color: '#8B0000',
         score: 45,
         weight: 0  // 合体でのみ出現
@@ -95,7 +95,7 @@ const CAT_DATA = [
         name: '神秘猫',
         emoji: '🐈‍⬛',
         image: 'assets/cats/cat10.png',
-        radius: 130,
+        radius: 106,
         color: '#4B0082',
         score: 55,
         weight: 0  // 合体でのみ出現
@@ -105,7 +105,7 @@ const CAT_DATA = [
         name: '伝説猫',
         emoji: '🦁',
         image: 'assets/cats/cat11.png',
-        radius: 152,
+        radius: 124,
         color: '#FFD700',
         score: 100,
         weight: 0  // 合体でのみ出現
