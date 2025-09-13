@@ -26,6 +26,10 @@ const DIFFICULTY_SETTINGS = {
     }
 };
 
+// 描画と境界の見た目安定用の定数
+const RENDER_OUTLINE_WIDTH = 2;     // 円の外周ストローク幅(px)
+const EDGE_VISUAL_INSET = 2;        // 見た目上の内側余白（ボーダーに“めり込まない”ため）
+
 // ゲームのメインロジック
 class CatDropGame {
     constructor() {
@@ -202,46 +206,32 @@ class CatDropGame {
 
         // 新しい壁を作成
         const thickness = 50;
-        // デバイス固有の表示差異を考慮した床境界設定
-        const devicePixelRatio = window.devicePixelRatio || 1;
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        // デバイスタイプとピクセル密度に応じて調整
-        let floorBuffer;
-        if (isMobile && devicePixelRatio >= 2) {
-            // iPhone/iPadなど高DPIモバイル：より厳密に
-            floorBuffer = 2;
-        } else if (isMobile) {
-            // 低DPIモバイル
-            floorBuffer = 2.5;
-        } else {
-            // PCブラウザ：少し余裕を持たせる
-            floorBuffer = 1.5;
-        }
-
-        const floorTop = this.canvas.height - floorBuffer;
+        // 見た目の内側余白を明示的に確保
+        const inset = EDGE_VISUAL_INSET;
+        const floorTop = this.canvas.height - inset;
         this.floorTop = floorTop;
         this.walls.bottom = Bodies.rectangle(
             this.canvas.width / 2,
             floorTop + thickness / 2,
-            this.canvas.width + thickness * 2,
+            // 左右も inset を考慮して少し内側に（見た目の“壁”と一致させる）
+            this.canvas.width - inset * 2 + thickness * 2,
             thickness,
             { isStatic: true, label: 'wall', slop: 0.005 } // slopをさらに小さく
         );
 
         this.walls.left = Bodies.rectangle(
-            -thickness / 2,
+            inset - thickness / 2,
             this.canvas.height / 2,
             thickness,
-            this.canvas.height,
+            this.canvas.height - inset,
             { isStatic: true, label: 'wall', slop: 0.005 }
         );
 
         this.walls.right = Bodies.rectangle(
-            this.canvas.width + thickness / 2,
+            this.canvas.width - inset + thickness / 2,
             this.canvas.height / 2,
             thickness,
-            this.canvas.height,
+            this.canvas.height - inset,
             { isStatic: true, label: 'wall', slop: 0.005 }
         );
 
@@ -252,28 +242,13 @@ class CatDropGame {
     // 物理解の後に最終的な床面での"めり込み"を補正（視覚と一致させる）
     enforceFloorClamp() {
         const { Body } = Matter;
-
-        // デバイス固有の視覚境界調整
-        const devicePixelRatio = window.devicePixelRatio || 1;
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        let visualBuffer;
-        if (isMobile && devicePixelRatio >= 2) {
-            // iPhone/iPadなど高DPIモバイル：ピクセルパーフェクト
-            visualBuffer = 0.5;
-        } else if (isMobile) {
-            // 低DPIモバイル
-            visualBuffer = 1;
-        } else {
-            // PCブラウザ：少し余裕
-            visualBuffer = 0.8;
-        }
-
-        const visualFloorY = this.canvas.height - visualBuffer;
+        const visualFloorY = this.canvas.height - EDGE_VISUAL_INSET;
+        const strokeHalf = RENDER_OUTLINE_WIDTH * 0.5;
 
         for (const cat of this.droppingCats) {
             const radius = cat.circleRadius;
-            const bottomY = cat.position.y + radius;
+            // 輪郭線分（stroke の半分）も含めて判定
+            const bottomY = cat.position.y + radius + strokeHalf;
 
             // 猫の底が視覚境界を超えていないかチェック
             if (bottomY > visualFloorY) {
@@ -287,6 +262,34 @@ class CatDropGame {
                 // 下向き速度をリセット（跳ね戻り防止）
                 if (cat.velocity.y > 0) {
                     Body.setVelocity(cat, { x: cat.velocity.x, y: 0 });
+                }
+            }
+        }
+    }
+
+    // 左右の“めり込み”も視覚的に補正
+    enforceSideClamp() {
+        const { Body } = Matter;
+        const strokeHalf = RENDER_OUTLINE_WIDTH * 0.5;
+        const leftBound = EDGE_VISUAL_INSET;
+        const rightBound = this.canvas.width - EDGE_VISUAL_INSET;
+
+        for (const cat of this.droppingCats) {
+            const radius = cat.circleRadius;
+            const leftX = cat.position.x - radius - strokeHalf;
+            const rightX = cat.position.x + radius + strokeHalf;
+
+            if (leftX < leftBound) {
+                const dx = leftBound - leftX;
+                Body.setPosition(cat, { x: cat.position.x + dx, y: cat.position.y });
+                if (cat.velocity.x < 0) {
+                    Body.setVelocity(cat, { x: 0, y: cat.velocity.y });
+                }
+            } else if (rightX > rightBound) {
+                const dx = rightX - rightBound;
+                Body.setPosition(cat, { x: cat.position.x - dx, y: cat.position.y });
+                if (cat.velocity.x > 0) {
+                    Body.setVelocity(cat, { x: 0, y: cat.velocity.y });
                 }
             }
         }
@@ -551,6 +554,8 @@ class CatDropGame {
                 Engine.update(this.engine, 1000 / 60);
                 // 床面での“めり込み”最終補正
                 this.enforceFloorClamp();
+                // 左右の“めり込み”も補正
+                this.enforceSideClamp();
                 
                 // 描画
                 this.render();
