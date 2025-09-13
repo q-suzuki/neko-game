@@ -163,6 +163,10 @@ class CatDropGame {
         
         // エンジンの作成
         this.engine = Engine.create();
+        // 交差のめり込み軽減（特にモバイルSafari）
+        this.engine.positionIterations = 12; // 既定6 → 12
+        this.engine.velocityIterations = 8;  // 既定4 → 8
+        this.engine.constraintIterations = 4; // 既定2 → 4
         this.world = this.engine.world;
         
         // 重力の設定（難易度に応じて調整）
@@ -197,12 +201,14 @@ class CatDropGame {
         
         // 新しい壁を作成
         const thickness = 50;
+        // iOSでの沈み込みを視覚的に防ぐため、床のトップをキャンバス内に0.5pxだけ入れる
+        const floorTop = this.canvas.height - 0.5;
         this.walls.bottom = Bodies.rectangle(
             this.canvas.width / 2,
-            this.canvas.height + thickness / 2,
+            floorTop + thickness / 2,
             this.canvas.width + thickness * 2,
             thickness,
-            { isStatic: true, label: 'wall' }
+            { isStatic: true, label: 'wall', slop: 0.01 }
         );
         
         this.walls.left = Bodies.rectangle(
@@ -210,7 +216,7 @@ class CatDropGame {
             this.canvas.height / 2,
             thickness,
             this.canvas.height,
-            { isStatic: true, label: 'wall' }
+            { isStatic: true, label: 'wall', slop: 0.01 }
         );
         
         this.walls.right = Bodies.rectangle(
@@ -218,7 +224,7 @@ class CatDropGame {
             this.canvas.height / 2,
             thickness,
             this.canvas.height,
-            { isStatic: true, label: 'wall' }
+            { isStatic: true, label: 'wall', slop: 0.01 }
         );
         
         // 壁を世界に追加
@@ -258,6 +264,8 @@ class CatDropGame {
         const cat = Bodies.circle(x, 10, this.nextCat.radius, {  // 上部から落下
             restitution: 0.2,  // 弾性（跳ねすぎ防止）
             friction: 0.5,      // 摩擦
+            frictionAir: 0.02,
+            slop: 0.01,         // めり込み許容量を小さく
             density: 0.001,     // 密度
             label: 'cat',
             catData: this.nextCat
@@ -328,6 +336,8 @@ class CatDropGame {
         const newCat = Bodies.circle(x, y, nextCat.radius, {
             restitution: 0.2,  // 合体後も跳ねすぎ防止
             friction: 0.5,
+            frictionAir: 0.02,
+            slop: 0.01,
             density: 0.001,
             label: 'cat',
             catData: nextCat
