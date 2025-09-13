@@ -34,6 +34,8 @@ const DIFFICULTY_SETTINGS = {
 const RENDER_OUTLINE_WIDTH = 2;     // 円の外周ストローク幅(px)
 const RENDER_INNER_PADDING = 0;     // 視覚ギャップを最小化しつつ内側ストローク
 const EDGE_VISUAL_INSET = 2;        // 見た目上の内側余白（壁のボーダー考慮）
+const DANGER_EPS = 0.5;             // 危険ライン判定の微小誤差吸収
+const SETTLE_REQUIRED_MS = 100;     // ライン上での連続静止必要時間
 
 // ゲームのメインロジック
 class CatDropGame {
@@ -229,7 +231,7 @@ class CatDropGame {
             // 左右も inset を考慮して少し内側に（見た目の“壁”と一致させる）
             this.canvas.width - inset * 2 + thickness * 2,
             thickness,
-            { isStatic: true, label: 'wall', slop: 0.002 }
+            { isStatic: true, label: 'floor', slop: 0.002 }
         );
 
         this.walls.left = Bodies.rectangle(
@@ -341,22 +343,25 @@ class CatDropGame {
         
         // 猫の物理ボディを作成
         const cat = Bodies.circle(x, 10, this.nextCat.radius, {  // 上部から落下
-            // 過剰な“引っかかり”を抑え、自然に落ち着く値へ調整
+            // さらに少し滑りやすく
             restitution: 0.04,
-            friction: 0.8,
-            frictionStatic: 0.9,
-            frictionAir: 0.02,
+            friction: 0.70,
+            frictionStatic: 0.80,
+            frictionAir: 0.015,
             // ごく小さな“めり込み”を許容して解像度を安定化
             slop: 0.002,
             density: 0.0014,
             label: 'cat',
             catData: this.nextCat,
-            sleepThreshold: 40
+            sleepThreshold: 30
         });
         
         // 世界に追加
         World.add(this.world, cat);
         this.droppingCats.push(cat);
+
+        // 危険ライン状態の初期化（上から下へ通過中は即ゲームオーバーしない）
+        this.initCatDangerState(cat);
         
         // ドロップクールダウン
         this.canDrop = false;
@@ -380,6 +385,23 @@ class CatDropGame {
         pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
             
+            // grounded 条件の厳格化: 床 or 自分より下にいる猫との接触のみ
+            const SUPPORT_EPS = 2;
+            if (bodyA && bodyA.label === 'cat' && bodyB) {
+                if (bodyB.label === 'floor') {
+                    bodyA._grounded = true;
+                } else if (bodyB.label === 'cat' && bodyB.position.y > bodyA.position.y + SUPPORT_EPS) {
+                    bodyA._grounded = true;
+                }
+            }
+            if (bodyB && bodyB.label === 'cat' && bodyA) {
+                if (bodyA.label === 'floor') {
+                    bodyB._grounded = true;
+                } else if (bodyA.label === 'cat' && bodyA.position.y > bodyB.position.y + SUPPORT_EPS) {
+                    bodyB._grounded = true;
+                }
+            }
+
             // 両方が猫かチェック
             if (bodyA.label === 'cat' && bodyB.label === 'cat') {
                 const catDataA = bodyA.catData;
@@ -419,19 +441,22 @@ class CatDropGame {
         // 新しい猫を作成
         const newCat = Bodies.circle(x, y, nextCat.radius, {
             restitution: 0.04,
-            friction: 0.8,
-            frictionStatic: 0.9,
-            frictionAir: 0.02,
+            friction: 0.70,
+            frictionStatic: 0.80,
+            frictionAir: 0.015,
             slop: 0.002,
             density: 0.0014,
             label: 'cat',
             catData: nextCat,
-            sleepThreshold: 40
+            sleepThreshold: 30
         });
         
         // 世界に追加
         World.add(this.world, newCat);
         this.droppingCats.push(newCat);
+
+        // 危険ライン状態の初期化（新規生成直後の状態を基準化）
+        this.initCatDangerState(newCat);
 
         // 近傍の眠っている物体を起こし、重なりを軽減
         this.postMergeSettle(newCat);
@@ -594,22 +619,56 @@ class CatDropGame {
     }
     
     checkGameOver() {
-        // 危険ラインは難易度に関係なく Normal のラインを採用
-        const base = DIFFICULTY_SETTINGS.normal;
-        const dangerLine = Math.max(base.dangerLineMin, this.canvas.height * base.dangerLinePercent);
-        
+        // CSSの赤線位置と判定ラインを完全一致させる
+        const dangerLine = this.getDangerLineY();
+
         for (const cat of this.droppingCats) {
-            // より厳格な静止判定：速度と角速度の両方をチェック
-            const isSettled = Math.abs(cat.velocity.y) < 0.5 && 
-                             Math.abs(cat.velocity.x) < 0.5 && 
-                             Math.abs(cat.angularVelocity) < 0.1;
-            
-            // 完全に静止した猫のみゲームオーバー判定
-            if (isSettled && cat.position.y - cat.circleRadius < dangerLine) {
-                this.endGame();
-                return;
+            // ライン相対位置（円の上端）
+            const topY = cat.position.y - cat.circleRadius;
+            const aboveNow = topY < (dangerLine - DANGER_EPS);
+
+            // 静止判定（完全静止）：並進速度/角速度がすべて 0
+            const isSettled = (cat.velocity.x === 0 &&
+                               cat.velocity.y === 0 &&
+                               cat.angularVelocity === 0);
+
+            // 生成直後・落下中は grounded=false。何かに触れた後のみ true。
+            const grounded = !!cat._grounded;
+
+            // 条件が揃った連続時間を測定（ライン上かつ静止かつ grounded）
+            const now = performance && performance.now ? performance.now() : Date.now();
+            if (grounded && isSettled && aboveNow) {
+                if (cat._lineStillSince == null) {
+                    cat._lineStillSince = now;
+                }
+                if (now - cat._lineStillSince >= SETTLE_REQUIRED_MS) {
+                    this.endGame();
+                    return;
+                }
+            } else {
+                // いずれかが崩れたらリセット
+                cat._lineStillSince = null;
             }
         }
+    }
+
+    // ボディの危険ライン状態を初期化
+    initCatDangerState(body) {
+        const dangerLine = this.getDangerLineY();
+        const topY = body.position.y - body.circleRadius;
+        body._wasAboveDangerLine = topY < (dangerLine - DANGER_EPS);
+        body._crossedUpward = false;
+        body._grounded = false;
+        body._lineStillSince = null;
+    }
+
+    // DOMの赤線(top px)をそのままゲーム判定Yに使う
+    getDangerLineY() {
+        const el = document.getElementById('danger-line');
+        if (el && typeof el.offsetTop === 'number') {
+            return el.offsetTop;
+        }
+        return DIFFICULTY_SETTINGS.normal.dangerLineMin;
     }
     
     endGame() {
@@ -631,6 +690,8 @@ class CatDropGame {
                 // iPhone向けの手動クランプは無効化（揺れの原因）
                 // 転がり減衰を軽く付与（過度な回転→滑りを抑制）
                 this.applyRollingDamping();
+                // 危険ライン越えの監視（毎フレーム）
+                this.checkGameOver();
                 
                 // 描画
                 this.render();
@@ -648,8 +709,8 @@ class CatDropGame {
         for (const cat of this.droppingCats) {
             // 過度な回転を徐々に弱める（速度が低い時のみ）
             const linSpeed = Math.hypot(cat.velocity.x, cat.velocity.y);
-            if (linSpeed < 2 && Math.abs(cat.angularVelocity) > 0.02) {
-                Body.setAngularVelocity(cat, cat.angularVelocity * 0.90);
+            if (linSpeed < 2 && Math.abs(cat.angularVelocity) > 0.05) {
+                Body.setAngularVelocity(cat, cat.angularVelocity * 0.97);
             }
         }
     }
