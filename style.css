@@ -159,10 +159,13 @@ body {
 
 /* スコア用バッジ */
 .ui-badge {
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: static;         /* 通常フローで配置 */
+    top: auto;
+    left: auto;
+    transform: none;          /* 中央寄せはフレックスに任せる */
+    align-self: center;       /* 横方向の中央揃え */
+    margin-bottom: 8px;       /* ラベルの直上に近づける */
+    line-height: 1;           /* 上下の余白を詰める */
     font-size: 14px;
     pointer-events: none;
     filter: drop-shadow(0 1px 0 rgba(255,255,255,0.9));
