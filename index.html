@@ -10,6 +10,13 @@
 </head>
 <body>
     <div id="game-container">
+        <!-- ローディング画面 -->
+        <div id="loading-screen" aria-live="polite" aria-busy="true">
+            <div class="loading-content">
+                <div class="spinner" aria-hidden="true"></div>
+                <p>じゅんびちゅう...</p>
+            </div>
+        </div>
         <!-- ゲームエリア全体 -->
         <div id="game-area">
             <!-- バナー -->
@@ -30,7 +37,10 @@
                     <div class="ui-label">つぎ</div>
                     <div id="next-cat-preview"></div>
                 </div>
-                <button id="reset-btn" class="ui-circle control-btn">🔄</button>
+                <button id="reset-btn" class="ui-circle control-btn">
+                    <div class="ui-label">はじめから</div>
+                    <div class="reset-icon">🔄</div>
+                </button>
             </div>
 
             <!-- ゲームボックス -->

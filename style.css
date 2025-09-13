@@ -29,6 +29,50 @@ body {
     position: relative;
 }
 
+/* 準備中オーバーレイ */
+#loading-screen {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+}
+
+.loading-content {
+    text-align: center;
+    color: #8b4513;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(139, 69, 19, 0.25);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.loading-content p {
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 4px solid rgba(139, 69, 19, 0.2);
+    border-top-color: #8b4513;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto; /* 中央寄せ */
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 #game-area {
     width: min(400px, 100%);
     margin-left: auto;
@@ -151,19 +195,9 @@ body {
     transform: scale(0.95);
 }
 
-/* リロード（はじめから）ラベル */
-#reset-btn {
-    position: relative;
-}
-#reset-btn::before {
-    content: 'はじめから';
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 10px;
-    color: #8b4513;
-    letter-spacing: 0.04em;
+/* リセットボタン内のアイコン調整（任意） */
+#reset-btn .reset-icon {
+    font-size: 20px;
 }
 
 /* ゲームボックス */

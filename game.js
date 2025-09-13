@@ -80,20 +80,32 @@ class CatDropGame {
             }
         });
         
+        // ローディング画面
+        this.loadingScreen = document.getElementById('loading-screen');
+
         // 画像を読み込む
         this.loadImages().then(() => {
             this.imagesLoaded = true;
             // 次の猫を準備
             this.prepareNextCat();
+            this.hideLoading();
         }).catch(error => {
             console.warn('画像の読み込みに失敗しました。絵文字を使用します。', error);
             // 画像なしでも動作するようにする
             this.imagesLoaded = false;
             this.prepareNextCat();
+            this.hideLoading();
         });
         
         // ゲームループ開始
         this.startGameLoop();
+    }
+
+    hideLoading() {
+        if (this.loadingScreen) {
+            this.loadingScreen.style.display = 'none';
+            this.loadingScreen.setAttribute('aria-busy', 'false');
+        }
     }
 
     // ドロップガイドラインの終点（最初の猫の上端 or 底）を返す
