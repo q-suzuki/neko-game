@@ -115,7 +115,10 @@ class CatDropGame {
         const height = this.canvas.height;
         if (x < 0 || x > width) return height;
 
-        let minY = height; // 下端（猫が無ければ底まで）
+        // 新しい猫の半径を考慮した実際の床位置
+        const minCatRadius = 20;
+        let minY = height - minCatRadius; // 猫が床に着地する実際の位置
+
         for (const cat of this.droppingCats) {
             const cx = cat.position.x;
             const cy = cat.position.y;
@@ -125,8 +128,10 @@ class CatDropGame {
                 // 垂直線と円の交点（上側）
                 const dy = Math.sqrt(r * r - dx * dx);
                 const yTop = cy - dy;
-                if (yTop >= 0 && yTop < minY) {
-                    minY = yTop;
+                // 新しい猫の半径分の余裕を持たせる
+                const adjustedYTop = yTop - minCatRadius;
+                if (adjustedYTop >= 0 && adjustedYTop < minY) {
+                    minY = adjustedYTop;
                 }
             }
         }
@@ -193,57 +198,66 @@ class CatDropGame {
     
     updateWalls() {
         const { Bodies, World } = Matter;
-        
+
         // 既存の壁を削除
         if (this.walls.bottom) World.remove(this.world, this.walls.bottom);
         if (this.walls.left) World.remove(this.world, this.walls.left);
         if (this.walls.right) World.remove(this.world, this.walls.right);
-        
+
         // 新しい壁を作成
         const thickness = 50;
-        // iOSでの沈み込みを視覚的に防ぐため、床のトップをキャンバス内に0.5pxだけ入れる
-        const floorTop = this.canvas.height - 1.0; // さらに明確に視覚的余白を確保
-        this.floorTop = floorTop; // 後段のクランプで使用
+        // iPhone対応：猫の半径分だけ余裕を持たせて床境界を設定
+        const minCatRadius = 20; // 最小の猫半径
+        const floorTop = this.canvas.height - minCatRadius; // 猫の中心が床から半径分上に来るように
+        this.floorTop = floorTop;
         this.walls.bottom = Bodies.rectangle(
             this.canvas.width / 2,
             floorTop + thickness / 2,
             this.canvas.width + thickness * 2,
             thickness,
-            { isStatic: true, label: 'wall', slop: 0.01 }
+            { isStatic: true, label: 'wall', slop: 0.005 } // slopをさらに小さく
         );
-        
+
         this.walls.left = Bodies.rectangle(
             -thickness / 2,
             this.canvas.height / 2,
             thickness,
             this.canvas.height,
-            { isStatic: true, label: 'wall', slop: 0.01 }
+            { isStatic: true, label: 'wall', slop: 0.005 }
         );
-        
+
         this.walls.right = Bodies.rectangle(
             this.canvas.width + thickness / 2,
             this.canvas.height / 2,
             thickness,
             this.canvas.height,
-            { isStatic: true, label: 'wall', slop: 0.01 }
+            { isStatic: true, label: 'wall', slop: 0.005 }
         );
-        
+
         // 壁を世界に追加
         World.add(this.world, [this.walls.bottom, this.walls.left, this.walls.right]);
     }
 
-    // 物理解の後に最終的な床面での“めり込み”を補正（視覚と一致させる）
+    // 物理解の後に最終的な床面での"めり込み"を補正（視覚と一致させる）
     enforceFloorClamp() {
         const { Body } = Matter;
-        const floorTop = (typeof this.floorTop === 'number') ? this.floorTop : (this.canvas.height - 1);
+        // 視覚境界：キャンバスの実際の底部
+        const visualFloorY = this.canvas.height;
+
         for (const cat of this.droppingCats) {
             const radius = cat.circleRadius;
-            const bottom = cat.position.y + radius;
-            const overlap = bottom - floorTop;
-            if (overlap > 0) {
-                // y位置を床上にクランプ
-                Body.setPosition(cat, { x: cat.position.x, y: cat.position.y - overlap });
-                // 下向き速度をゼロに（跳ね戻り最小化）
+            const bottomY = cat.position.y + radius;
+
+            // 猫の底が視覚境界を超えていないかチェック
+            if (bottomY > visualFloorY) {
+                const overlap = bottomY - visualFloorY;
+                // 猫の中心位置を上に移動して視覚境界内に収める
+                Body.setPosition(cat, {
+                    x: cat.position.x,
+                    y: cat.position.y - overlap - 1 // 1px余裕を持たせる
+                });
+
+                // 下向き速度をリセット（跳ね戻り防止）
                 if (cat.velocity.y > 0) {
                     Body.setVelocity(cat, { x: cat.velocity.x, y: 0 });
                 }
@@ -282,10 +296,10 @@ class CatDropGame {
         
         // 猫の物理ボディを作成
         const cat = Bodies.circle(x, 10, this.nextCat.radius, {  // 上部から落下
-            restitution: 0.2,  // 弾性（跳ねすぎ防止）
-            friction: 0.5,      // 摩擦
+            restitution: 0.1,   // 弾性を下げて跳ね戻りを抑制
+            friction: 0.6,      // 摩擦を上げて安定性向上
             frictionAir: 0.02,
-            slop: 0.01,         // めり込み許容量を小さく
+            slop: 0.005,        // めり込み許容量をさらに小さく
             density: 0.001,     // 密度
             label: 'cat',
             catData: this.nextCat
@@ -354,10 +368,10 @@ class CatDropGame {
         
         // 新しい猫を作成
         const newCat = Bodies.circle(x, y, nextCat.radius, {
-            restitution: 0.2,  // 合体後も跳ねすぎ防止
-            friction: 0.5,
+            restitution: 0.1,  // 合体後も跳ねすぎ防止
+            friction: 0.6,     // 安定性向上
             frictionAir: 0.02,
-            slop: 0.01,
+            slop: 0.005,       // めり込み許容量を小さく
             density: 0.001,
             label: 'cat',
             catData: nextCat
