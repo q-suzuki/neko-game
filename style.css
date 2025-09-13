@@ -323,7 +323,7 @@ body {
     padding: 30px;
     border-radius: 20px;
     text-align: center;
-    max-width: 80%;
+    width: clamp(340px, 92vw, 560px);
 }
 
 .start-content h1 {
@@ -379,10 +379,8 @@ body {
 }
 
 .difficulty-buttons {
-    display: flex;
+    display: inline-grid;
     gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
 }
 
 .difficulty-btn {
