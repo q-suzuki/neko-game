@@ -39,11 +39,13 @@ The game follows a modular JavaScript architecture with clean separation of conc
 **Difficulty System**
 ```javascript
 DIFFICULTY_SETTINGS = {
-    easy: { dangerLinePercent: 0.10, maxDropLevel: 3 },
-    normal: { dangerLinePercent: 0.15, maxDropLevel: 5 },
-    hard: { dangerLinePercent: 0.25, maxDropLevel: 5 }
+  easy:    { dangerLinePercent: 0.10, maxDropLevel: 3, dropWeights: {1:6, 2:4, 3:2} },
+  normal:  { dangerLinePercent: 0.15, maxDropLevel: 4, dropWeights: {1:6, 2:4, 3:3, 4:2} },
+  hard:    { dangerLinePercent: 0.25, maxDropLevel: 5, dropWeights: {1:6, 2:4, 3:3, 4:2, 5:1} },
+  paradise:{ dangerLinePercent: 0.30, maxDropLevel: 5, dropWeights: {1:8, 2:5, 3:3, 4:2, 5:1} }
 }
 ```
+`getRandomDropCat(maxLevel, weightsOverride)` は `weightsOverride` が指定された場合、難易度ごとの重みを用いてドロップを決定します（上限 `maxDropLevel` 以内のみ）。
 
 **Cat Progression System**
 - 7 cat levels with weighted random selection for drops

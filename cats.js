@@ -1,4 +1,6 @@
 // 猫のデータ定義（11種類）
+// 表示・物理半径のスケール
+const CAT_RADIUS_SCALE = 1.00;
 const CAT_DATA = [
     {
         id: 1,
@@ -65,7 +67,7 @@ const CAT_DATA = [
         name: '巨大猫',
         emoji: '😾',
         image: 'assets/cats/cat7.png',
-        radius: 63,
+        radius: 62,
         color: '#FF4500',
         score: 28,
         weight: 0  // 合体でのみ出現
@@ -112,23 +114,56 @@ const CAT_DATA = [
     }
 ];
 
-// 次に落とす猫を選択する関数（難易度対応）
-function getRandomDropCat(maxLevel = 5) {
-    // weight > 0 かつ maxLevel以下の猫のみ選択可能
-    const droppableCats = CAT_DATA.filter(cat => cat.weight > 0 && cat.id <= maxLevel);
-    
-    // 重み付き確率で選択
-    const totalWeight = droppableCats.reduce((sum, cat) => sum + cat.weight, 0);
-    let random = Math.random() * totalWeight;
-    
+// スケール適用した猫データを返す（コピー）
+function toScaledCat(cat) {
+    if (!cat) return null;
+    const scaledRadius = Math.round(cat.radius * CAT_RADIUS_SCALE);
+    return { ...cat, radius: scaledRadius };
+}
+
+// 次に落とす猫を選択する関数（難易度ごとの重み上書きに対応）
+function getRandomDropCat(maxLevel = 5, weightsOverride = null) {
+    // id が maxLevel 以下、かつ（上書き重み > 0 または 既定重み > 0）の猫のみ対象
+    const droppableCats = CAT_DATA.filter(cat => {
+        if (cat.id > maxLevel) return false;
+        const w = weightsOverride && typeof weightsOverride[cat.id] === 'number'
+            ? weightsOverride[cat.id]
+            : cat.weight;
+        return w > 0;
+    });
+
+    if (droppableCats.length === 0) {
+        // 何らかの理由で候補がない場合は、従来条件でフォールバック
+        const fallback = CAT_DATA.filter(cat => cat.weight > 0 && cat.id <= maxLevel);
+        return toScaledCat(fallback[0] || CAT_DATA[0]);
+    }
+
+    // 重み合計を算出（上書き重みがあればそちらを使用）
+    const totalWeight = droppableCats.reduce((sum, cat) => {
+        const w = weightsOverride && typeof weightsOverride[cat.id] === 'number'
+            ? weightsOverride[cat.id]
+            : cat.weight;
+        return sum + w;
+    }, 0);
+
+    // totalWeight が 0 なら既定重みで再計算
+    const effectiveTotal = totalWeight > 0
+        ? totalWeight
+        : droppableCats.reduce((sum, cat) => sum + cat.weight, 0);
+
+    let random = Math.random() * effectiveTotal;
     for (const cat of droppableCats) {
-        random -= cat.weight;
+        const w = (weightsOverride && typeof weightsOverride[cat.id] === 'number')
+            ? weightsOverride[cat.id]
+            : cat.weight;
+        const useW = (totalWeight > 0) ? w : cat.weight;
+        random -= useW;
         if (random <= 0) {
-            return {...cat};  // コピーを返す
+            return toScaledCat(cat);  // スケール済みコピーを返す
         }
     }
-    
-    return {...droppableCats[0]};  // フォールバック
+
+    return toScaledCat(droppableCats[0]);  // フォールバック
 }
 
 // 猫のレベルから次のレベルの猫を取得
@@ -136,12 +171,13 @@ function getNextLevelCat(currentId) {
     if (currentId >= CAT_DATA.length) {
         return null;  // 最大レベル
     }
-    return {...CAT_DATA[currentId]};  // 次のレベルの猫（IDは1ベースなので、そのままインデックスとして使える）
+    return toScaledCat(CAT_DATA[currentId]);  // 次のレベルの猫（IDは1ベース）
 }
 
 // 猫のIDからデータを取得
 function getCatById(id) {
-    return CAT_DATA.find(cat => cat.id === id) || CAT_DATA[0];
+    const found = CAT_DATA.find(cat => cat.id === id) || CAT_DATA[0];
+    return toScaledCat(found);
 }
 
 // 合体時のエフェクト用データ

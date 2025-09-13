@@ -2,40 +2,41 @@
 const DIFFICULTY_SETTINGS = {
     easy: {
         name: 'かんたん',
-        // ラインは難易度に依存させず、Normal を使用（checkGameOver側で参照）
-        dangerLinePercent: 0.10,
-        dangerLineMin: 80,
+        // 判定ラインは全難易度で固定（下の DANGER_LINE_PX を使用）
         dropCooldown: 300,
         gravity: 0.8,
         maxDropLevel: 3,          // ドロッププール（かんたんモードは3種類）
-        maxAllowedLevel: 8        // 出現可能（合体含む）な最大レベル
+        maxAllowedLevel: 8,       // 出現可能（合体含む）な最大レベル
+        // 推奨ドロップ重み（Lv1–3）
+        dropWeights: { 1: 6, 2: 4, 3: 2 }
     },
     normal: {
         name: 'ふつう',
-        dangerLinePercent: 0.15,
-        dangerLineMin: 100,
-        dropCooldown: 500,
+        dropCooldown: 300,
         gravity: 0.8,
         maxDropLevel: 4,
-        maxAllowedLevel: 9
+        maxAllowedLevel: 9,
+        // 推奨ドロップ重み（Lv1–4）
+        dropWeights: { 1: 6, 2: 4, 3: 3, 4: 2 }
     },
     hard: {
         name: 'むずかしい',
-        dangerLinePercent: 0.25,
-        dangerLineMin: 150,
-        dropCooldown: 700,
+        dropCooldown: 300,
         gravity: 0.8,
         maxDropLevel: 5,
-        maxAllowedLevel: 10
+        maxAllowedLevel: 10,
+        // 推奨ドロップ重み（Lv1–5）
+        dropWeights: { 1: 6, 2: 4, 3: 3, 4: 2, 5: 1 }
     },
     paradise: {
         name: 'ねこ天国',
-        dangerLinePercent: 0.30,
-        dangerLineMin: 180,
-        dropCooldown: 800,
+        dropCooldown: 300,
         gravity: 0.8,
-        maxDropLevel: 6,
-        maxAllowedLevel: 11
+        // Lv6 はデフォ重みが 0 のため 5 に統一
+        maxDropLevel: 5,
+        maxAllowedLevel: 11,
+        // 推奨ドロップ重み（Lv1–5）
+        dropWeights: { 1: 8, 2: 5, 3: 3, 4: 2, 5: 1 }
     }
 };
 
@@ -45,6 +46,7 @@ const RENDER_INNER_PADDING = 0;     // 視覚ギャップを最小化しつつ�
 const EDGE_VISUAL_INSET = 2;        // 見た目上の内側余白（壁のボーダー考慮）
 const DANGER_EPS = 0.5;             // 危険ライン判定の微小誤差吸収
 const SETTLE_REQUIRED_MS = 100;     // ライン上での連続静止必要時間
+const DANGER_LINE_PX = 100;         // 全難易度で統一する判定ライン（px）
 
 // ゲームのメインロジック
 class CatDropGame {
@@ -72,10 +74,10 @@ class CatDropGame {
         this.gameOverScreen = document.getElementById('game-over');
         this.startScreen = document.getElementById('start-screen');
 
-        // 危険ラインの初期位置を Normal に合わせる
+        // 危険ラインの初期位置（全難易度で固定値）
         const initDanger = document.getElementById('danger-line');
         if (initDanger) {
-            initDanger.style.top = `${DIFFICULTY_SETTINGS.normal.dangerLineMin}px`;
+            initDanger.style.top = `${DANGER_LINE_PX}px`;
         }
 
         // 初期バナー表示
@@ -321,9 +323,12 @@ class CatDropGame {
     
     prepareNextCat() {
         const difficulty = DIFFICULTY_SETTINGS[this.difficulty];
-        // ドロップは設定上限まで（従来どおり）。
-        // ただし“出現可能な最大レベル”は別途マージ処理側で制御。
-        this.nextCat = getRandomDropCat(difficulty.maxDropLevel);
+        // ドロップは設定上限まで。難易度ごとの重みを使用。
+        // “出現可能な最大レベル”は別途マージ処理側で制御。
+        this.nextCat = getRandomDropCat(
+            difficulty.maxDropLevel,
+            difficulty.dropWeights
+        );
         this.updateNextCatPreview();
     }
     
@@ -352,10 +357,10 @@ class CatDropGame {
         
         // 猫の物理ボディを作成
         const cat = Bodies.circle(x, 10, this.nextCat.radius, {  // 上部から落下
-            // さらに少し滑りやすく
+            // より滑りやすく調整
             restitution: 0.04,
-            friction: 0.70,
-            frictionStatic: 0.80,
+            friction: 0.45,
+            frictionStatic: 0.55,
             frictionAir: 0.015,
             // ごく小さな“めり込み”を許容して解像度を安定化
             slop: 0.002,
@@ -450,8 +455,8 @@ class CatDropGame {
         // 新しい猫を作成
         const newCat = Bodies.circle(x, y, nextCat.radius, {
             restitution: 0.04,
-            friction: 0.70,
-            frictionStatic: 0.80,
+            friction: 0.45,
+            frictionStatic: 0.55,
             frictionAir: 0.015,
             slop: 0.002,
             density: 0.0014,
@@ -679,7 +684,7 @@ class CatDropGame {
         if (el && typeof el.offsetTop === 'number') {
             return el.offsetTop;
         }
-        return DIFFICULTY_SETTINGS.normal.dangerLineMin;
+        return DANGER_LINE_PX;
     }
     
     endGame() {
@@ -714,14 +719,14 @@ class CatDropGame {
         gameLoop();
     }
 
-    // 緩やかな回転減衰（“つるつる”感の抑制）
+    // 緩やかな回転減衰（転がりやすさを重視して緩和）
     applyRollingDamping() {
         const { Body } = Matter;
         for (const cat of this.droppingCats) {
-            // 過度な回転を徐々に弱める（速度が低い時のみ）
+            // 過度な回転のみを軽く制御（より自然な転がり）
             const linSpeed = Math.hypot(cat.velocity.x, cat.velocity.y);
-            if (linSpeed < 2 && Math.abs(cat.angularVelocity) > 0.05) {
-                Body.setAngularVelocity(cat, cat.angularVelocity * 0.97);
+            if (linSpeed < 1 && Math.abs(cat.angularVelocity) > 0.1) {
+                Body.setAngularVelocity(cat, cat.angularVelocity * 0.995);
             }
         }
     }
@@ -809,11 +814,10 @@ class CatDropGame {
             this.engine.gravity.y = settings.gravity;
         }
 
-        // 危険ラインの位置を更新（CSSも常に Normal 基準）
+        // 危険ラインの位置を更新（全難易度で固定）
         const dangerLineElement = document.getElementById('danger-line');
         if (dangerLineElement) {
-            const normalLinePx = DIFFICULTY_SETTINGS.normal.dangerLineMin;
-            dangerLineElement.style.top = `${normalLinePx}px`;
+            dangerLineElement.style.top = `${DANGER_LINE_PX}px`;
         }
 
         // 難易度別のベストスコアを読み込み・表示を更新
