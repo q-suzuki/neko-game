@@ -438,10 +438,14 @@ class CatDropGame {
     handleCollision(event) {
         const { World, Body } = Matter;
         const pairs = event.pairs;
-        
+
+        // 同フレーム内でのマージ対象を収集
+        const mergeGroups = new Map(); // レベルID -> [{bodyA, bodyB}, ...]
+        const processedBodies = new Set(); // 既に処理済みのボディを追跡
+
         pairs.forEach(pair => {
             const { bodyA, bodyB } = pair;
-            
+
             // grounded 条件の厳格化: 床 or 自分より下にいる猫との接触のみ
             const SUPPORT_EPS = 2;
             if (bodyA && bodyA.label === 'cat' && bodyB) {
@@ -463,18 +467,41 @@ class CatDropGame {
             if (bodyA.label === 'cat' && bodyB.label === 'cat') {
                 const catDataA = bodyA.catData;
                 const catDataB = bodyB.catData;
-                
+
                 // 同じレベルの猫かチェック
                 if (catDataA && catDataB && catDataA.id === catDataB.id) {
-                    const maxAllowed = DIFFICULTY_SETTINGS[this.difficulty]?.maxAllowedLevel || CAT_DATA.length;
-                    if (catDataA.id >= maxAllowed) {
-                        // 難易度ごとの“最大レベル”に達したら特別処理（消える＋ボーナス）
-                        this.mergeMaxLevelCats(bodyA, bodyB);
-                    } else {
-                        // まだ上がある場合は通常合体
-                        this.mergeCats(bodyA, bodyB);
+                    // 既に処理済みのボディは無視
+                    if (!processedBodies.has(bodyA) && !processedBodies.has(bodyB)) {
+                        const levelId = catDataA.id;
+                        if (!mergeGroups.has(levelId)) {
+                            mergeGroups.set(levelId, []);
+                        }
+                        mergeGroups.get(levelId).push({ bodyA, bodyB });
                     }
                 }
+            }
+        });
+
+        // 各レベルごとに1つのペアのみをランダム選択してマージ
+        mergeGroups.forEach((mergePairs, levelId) => {
+            if (mergePairs.length === 0) return;
+
+            // ランダムに1つのペアを選択
+            const randomIndex = Math.floor(Math.random() * mergePairs.length);
+            const { bodyA, bodyB } = mergePairs[randomIndex];
+
+            // 選択されたペアのボディを処理済みとしてマーク
+            processedBodies.add(bodyA);
+            processedBodies.add(bodyB);
+
+            // マージ処理実行
+            const maxAllowed = DIFFICULTY_SETTINGS[this.difficulty]?.maxAllowedLevel || CAT_DATA.length;
+            if (levelId >= maxAllowed) {
+                // 難易度ごとの"最大レベル"に達したら特別処理（消える＋ボーナス）
+                this.mergeMaxLevelCats(bodyA, bodyB);
+            } else {
+                // まだ上がある場合は通常合体
+                this.mergeCats(bodyA, bodyB);
             }
         });
     }
