@@ -7,8 +7,8 @@ const DIFFICULTY_SETTINGS = {
         dangerLineMin: 80,
         dropCooldown: 300,
         gravity: 0.8,
-        maxDropLevel: 3,          // ドロッププール（従来どおり）
-        maxAllowedLevel: 7        // 出現可能（合体含む）な最大レベル
+        maxDropLevel: 3,          // ドロッププール（かんたんモードは3種類）
+        maxAllowedLevel: 8        // 出現可能（合体含む）な最大レベル
     },
     normal: {
         name: 'ふつう',
@@ -16,7 +16,7 @@ const DIFFICULTY_SETTINGS = {
         dangerLineMin: 100,
         dropCooldown: 500,
         gravity: 0.8,
-        maxDropLevel: 5,
+        maxDropLevel: 4,
         maxAllowedLevel: 9
     },
     hard: {
@@ -26,6 +26,15 @@ const DIFFICULTY_SETTINGS = {
         dropCooldown: 700,
         gravity: 0.8,
         maxDropLevel: 5,
+        maxAllowedLevel: 10
+    },
+    paradise: {
+        name: 'ねこ天国',
+        dangerLinePercent: 0.30,
+        dangerLineMin: 180,
+        dropCooldown: 800,
+        gravity: 0.8,
+        maxDropLevel: 6,
         maxAllowedLevel: 11
     }
 };
@@ -43,7 +52,7 @@ class CatDropGame {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
         this.score = 0;
-        this.bestScore = this.loadBestScore();
+        this.bestScore = this.loadBestScore(this.difficulty);
         this.gameOver = false;
         this.nextCat = null;
         this.droppingCats = [];
@@ -598,18 +607,20 @@ class CatDropGame {
         // ベストスコア更新チェック
         if (this.score > this.bestScore) {
             this.bestScore = this.score;
-            this.saveBestScore();
+            this.saveBestScore(this.difficulty);
             this.updateBestScoreDisplay();
         }
     }
     
-    loadBestScore() {
-        const saved = localStorage.getItem('neko-game-best-score');
+    loadBestScore(difficulty = 'normal') {
+        const key = `neko-game-best-score-${difficulty}`;
+        const saved = localStorage.getItem(key);
         return saved ? parseInt(saved, 10) : 0;
     }
     
-    saveBestScore() {
-        localStorage.setItem('neko-game-best-score', this.bestScore.toString());
+    saveBestScore(difficulty = 'normal') {
+        const key = `neko-game-best-score-${difficulty}`;
+        localStorage.setItem(key, this.bestScore.toString());
     }
     
     updateBestScoreDisplay() {
@@ -792,18 +803,22 @@ class CatDropGame {
         this.difficulty = level;
         const settings = DIFFICULTY_SETTINGS[level];
         this.dropCooldown = settings.dropCooldown;
-        
+
         // 重力を更新
         if (this.engine) {
             this.engine.gravity.y = settings.gravity;
         }
-        
+
         // 危険ラインの位置を更新（CSSも常に Normal 基準）
         const dangerLineElement = document.getElementById('danger-line');
         if (dangerLineElement) {
             const normalLinePx = DIFFICULTY_SETTINGS.normal.dangerLineMin;
             dangerLineElement.style.top = `${normalLinePx}px`;
         }
+
+        // 難易度別のベストスコアを読み込み・表示を更新
+        this.bestScore = this.loadBestScore(level);
+        this.updateBestScoreDisplay();
 
         // バナーの難易度表記を更新
         this.updateDifficultyBanner();
