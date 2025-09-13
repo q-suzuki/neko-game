@@ -378,6 +378,14 @@ body {
     margin-bottom: 15px;
 }
 
+.difficulty-layout {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    justify-content: center;
+    flex-wrap: wrap; /* 狭い画面では折り返し */
+}
+
 .difficulty-buttons {
     display: inline-grid;
     gap: 10px;
@@ -387,13 +395,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 20px;
+    padding: 12px 16px;
     background: white;
     border: 2px solid #ddd;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
-    min-width: 90px;
+    min-width: 70px;
 }
 
 .difficulty-btn:active {
@@ -410,6 +418,44 @@ body {
     font-weight: bold;
     color: #333;
     margin-bottom: 4px;
+}
+
+/* 難易度の横に表示する統計 */
+.difficulty-stats {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    padding: 12px 14px;
+    min-width: 150px;
+    display: grid;
+    align-content: center;
+    gap: 10px;
+}
+
+.difficulty-stat {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 10px;
+    align-items: baseline;
+}
+
+.difficulty-stat + .difficulty-stat {
+    border-top: 1px dashed #eee;
+    padding-top: 10px;
+}
+
+.difficulty-stats .stat-label {
+    font-size: 12px;
+    color: #8b4513;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.difficulty-stats .stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    text-align: right;
 }
 
 
@@ -514,17 +560,67 @@ body {
         width: 68px;   /* 以前: 60px */
         height: 68px;  /* 以前: 60px */
     }
-    
+
     .ui-label {
         font-size: 9px;
     }
-    
+
     .score-circle #score,
     .score-circle #best-score {
         font-size: 14px;
     }
-    
+
     .control-btn {
         font-size: 20px;
+    }
+
+    /* 難易度選択ボタンをより小さく */
+    .difficulty-btn {
+        min-width: 60px;
+        padding: 10px 12px;
+    }
+
+    .difficulty-name {
+        font-size: 14px;
+    }
+
+    /* 難易度統計エリアも幅を狭める */
+    .difficulty-stats {
+        min-width: 120px;
+        padding: 8px 10px;
+    }
+
+    .difficulty-stats .stat-value {
+        font-size: 16px;
+    }
+}
+
+/* iPhoneSE（375px）専用対応 */
+@media (max-width: 375px) {
+    .difficulty-layout {
+        gap: 8px;
+    }
+
+    .difficulty-btn {
+        min-width: 55px;
+        padding: 8px 10px;
+    }
+
+    .difficulty-name {
+        font-size: 13px;
+    }
+
+    .difficulty-stats {
+        min-width: 110px;
+        padding: 6px 8px;
+        gap: 8px;
+    }
+
+    .difficulty-stats .stat-label {
+        font-size: 11px;
+    }
+
+    .difficulty-stats .stat-value {
+        font-size: 14px;
     }
 }

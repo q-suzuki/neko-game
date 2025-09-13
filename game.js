@@ -29,7 +29,7 @@ const DIFFICULTY_SETTINGS = {
         dropWeights: { 1: 6, 2: 4, 3: 3, 4: 2, 5: 1 }
     },
     paradise: {
-        name: 'ねこパラダイス',
+        name: 'パラダイス',
         dropCooldown: 300,
         gravity: 0.8,
         // Lv6 はデフォ重みが 0 のため 5 に統一
@@ -73,6 +73,10 @@ class CatDropGame {
         this.nextCatPreview = document.getElementById('next-cat-preview');
         this.gameOverScreen = document.getElementById('game-over');
         this.startScreen = document.getElementById('start-screen');
+        // 難易度選択横の情報表示
+        this.difficultyDropCountEl = document.getElementById('difficulty-drop-count');
+        this.difficultyAppearCountEl = document.getElementById('difficulty-appear-count');
+        this.difficultyBestScoreEl = document.getElementById('difficulty-best-score');
 
         // 危険ラインの初期位置（全難易度で固定値）
         const initDanger = document.getElementById('danger-line');
@@ -85,6 +89,8 @@ class CatDropGame {
         
         // ベストスコアを表示
         this.updateBestScoreDisplay();
+        // 難易度選択横の出現数/ベストスコアを初期表示
+        this.updateDifficultyMeta();
         
         // タッチコントローラーの初期化（ドロップラインの長さ計算を渡す）
         this.touchController = new TouchController(
@@ -127,6 +133,43 @@ class CatDropGame {
         
         // ゲームループ開始
         this.startGameLoop();
+    }
+
+    // 難易度ごとの“ドロップで出てくる猫の種類数”を数える
+    countDroppableCatsFor(level) {
+        const settings = DIFFICULTY_SETTINGS[level];
+        if (!settings) return 0;
+        const weights = settings.dropWeights || {};
+        let count = 0;
+        for (const cat of CAT_DATA) {
+            if (cat.id > settings.maxDropLevel) continue;
+            const w = (typeof weights[cat.id] === 'number') ? weights[cat.id] : cat.weight;
+            if (w > 0) count++;
+        }
+        return count;
+    }
+
+    // 難易度ごとの“合体を含めて登場可能な猫の種類数”
+    countAppearableCatsFor(level) {
+        const settings = DIFFICULTY_SETTINGS[level];
+        if (!settings) return 0;
+        // 1 〜 maxAllowedLevel（IDは1ベース）の総種類数
+        return Math.max(0, Math.min(settings.maxAllowedLevel, CAT_DATA.length));
+    }
+
+    // スタート画面の難易度横メタ情報を更新
+    updateDifficultyMeta() {
+        if (this.difficultyDropCountEl) {
+            const nDrop = this.countDroppableCatsFor(this.difficulty);
+            this.difficultyDropCountEl.textContent = `${nDrop}ひき`;
+        }
+        if (this.difficultyAppearCountEl) {
+            const nAppear = this.countAppearableCatsFor(this.difficulty);
+            this.difficultyAppearCountEl.textContent = `${nAppear}ひき`;
+        }
+        if (this.difficultyBestScoreEl) {
+            this.difficultyBestScoreEl.textContent = `${this.bestScore}`;
+        }
     }
 
     hideLoading() {
@@ -823,6 +866,8 @@ class CatDropGame {
         // 難易度別のベストスコアを読み込み・表示を更新
         this.bestScore = this.loadBestScore(level);
         this.updateBestScoreDisplay();
+        // スタート画面の表示も更新
+        this.updateDifficultyMeta();
 
         // バナーの難易度表記を更新
         this.updateDifficultyBanner();

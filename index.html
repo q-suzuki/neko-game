@@ -71,19 +71,35 @@
                 <!-- 難易度選択 -->
                 <div class="difficulty-selector">
                     <h3>むずかしさをえらんでね</h3>
-                    <div class="difficulty-buttons">
-                        <button class="difficulty-btn" data-difficulty="easy">
-                            <span class="difficulty-name">🌟 かんたん</span>
-                        </button>
-                        <button class="difficulty-btn active" data-difficulty="normal">
-                            <span class="difficulty-name">⭐ ふつう</span>
-                        </button>
-                        <button class="difficulty-btn" data-difficulty="hard">
-                            <span class="difficulty-name">🔥 むずかしい</span>
-                        </button>
-                        <button class="difficulty-btn" data-difficulty="paradise">
-                            <span class="difficulty-name">🌈 ねこパラダイス</span>
-                        </button>
+                    <div class="difficulty-layout">
+                        <div class="difficulty-buttons">
+                            <button class="difficulty-btn" data-difficulty="easy">
+                                <span class="difficulty-name">🌟 かんたん</span>
+                            </button>
+                            <button class="difficulty-btn active" data-difficulty="normal">
+                                <span class="difficulty-name">⭐ ふつう</span>
+                            </button>
+                            <button class="difficulty-btn" data-difficulty="hard">
+                                <span class="difficulty-name">🔥 むずかしい</span>
+                            </button>
+                            <button class="difficulty-btn" data-difficulty="paradise">
+                                <span class="difficulty-name">🌈 パラダイス</span>
+                            </button>
+                        </div>
+                        <div class="difficulty-stats" aria-live="polite">
+                            <div class="difficulty-stat">
+                                <div class="stat-label">おちてくるねこ</div>
+                                <div id="difficulty-drop-count" class="stat-value">-</div>
+                            </div>
+                            <div class="difficulty-stat">
+                                <div class="stat-label">出てくるねこ</div>
+                                <div id="difficulty-appear-count" class="stat-value">-</div>
+                            </div>
+                            <div class="difficulty-stat">
+                                <div class="stat-label">ベストスコア</div>
+                                <div id="difficulty-best-score" class="stat-value">0</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
