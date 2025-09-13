@@ -115,9 +115,7 @@ class CatDropGame {
         const height = this.canvas.height;
         if (x < 0 || x > width) return height;
 
-        // 新しい猫の半径を考慮した実際の床位置
-        const minCatRadius = 20;
-        let minY = height - minCatRadius; // 猫が床に着地する実際の位置
+        let minY = height; // 下端（猫が無ければ底まで）
 
         for (const cat of this.droppingCats) {
             const cx = cat.position.x;
@@ -128,10 +126,8 @@ class CatDropGame {
                 // 垂直線と円の交点（上側）
                 const dy = Math.sqrt(r * r - dx * dx);
                 const yTop = cy - dy;
-                // 新しい猫の半径分の余裕を持たせる
-                const adjustedYTop = yTop - minCatRadius;
-                if (adjustedYTop >= 0 && adjustedYTop < minY) {
-                    minY = adjustedYTop;
+                if (yTop >= 0 && yTop < minY) {
+                    minY = yTop;
                 }
             }
         }
@@ -206,9 +202,9 @@ class CatDropGame {
 
         // 新しい壁を作成
         const thickness = 50;
-        // iPhone対応：猫の半径分だけ余裕を持たせて床境界を設定
-        const minCatRadius = 20; // 最小の猫半径
-        const floorTop = this.canvas.height - minCatRadius; // 猫の中心が床から半径分上に来るように
+        // iPhone対応：適度な余裕を持たせて床境界を設定
+        const floorBuffer = 3; // 少しだけ余裕を持たせる（3px）
+        const floorTop = this.canvas.height - floorBuffer;
         this.floorTop = floorTop;
         this.walls.bottom = Bodies.rectangle(
             this.canvas.width / 2,
@@ -241,8 +237,8 @@ class CatDropGame {
     // 物理解の後に最終的な床面での"めり込み"を補正（視覚と一致させる）
     enforceFloorClamp() {
         const { Body } = Matter;
-        // 視覚境界：キャンバスの実際の底部
-        const visualFloorY = this.canvas.height;
+        // 視覚境界：キャンバスの底部から1px上
+        const visualFloorY = this.canvas.height - 1;
 
         for (const cat of this.droppingCats) {
             const radius = cat.circleRadius;
@@ -254,7 +250,7 @@ class CatDropGame {
                 // 猫の中心位置を上に移動して視覚境界内に収める
                 Body.setPosition(cat, {
                     x: cat.position.x,
-                    y: cat.position.y - overlap - 1 // 1px余裕を持たせる
+                    y: cat.position.y - overlap
                 });
 
                 // 下向き速度をリセット（跳ね戻り防止）
