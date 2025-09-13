@@ -1,27 +1,27 @@
 // 難易度設定
 const DIFFICULTY_SETTINGS = {
     easy: {
-        name: '簡単',
+        name: 'かんたん',
         dangerLinePercent: 0.10,  // 画面の10%（上＝スペース多い）
         dangerLineMin: 80,         // 最小80px
         dropCooldown: 300,         // 短い待機時間
-        gravity: 0.6,              // 統一した落下速度
+        gravity: 0.8,              // 統一した落下速度（少し速く）
         maxDropLevel: 3            // Lv3までの猫が落ちる
     },
     normal: {
-        name: '普通',
+        name: 'ふつう',
         dangerLinePercent: 0.15,  // 画面の15%（中間）
         dangerLineMin: 100,        // 最小100px
         dropCooldown: 500,         // 標準待機時間
-        gravity: 0.6,              // 統一した落下速度
+        gravity: 0.8,              // 統一した落下速度（少し速く）
         maxDropLevel: 5            // Lv5までの猫が落ちる
     },
     hard: {
-        name: '難しい',
+        name: 'むずかしい',
         dangerLinePercent: 0.25,  // 画面の25%（下＝スペース少ない）
         dangerLineMin: 150,        // 最小150px
         dropCooldown: 700,         // 長い待機時間
-        gravity: 0.6,              // 統一した落下速度
+        gravity: 0.8,              // 統一した落下速度（少し速く）
         maxDropLevel: 5            // Lv5までの猫が落ちる
     }
 };
@@ -51,19 +51,34 @@ class CatDropGame {
         this.nextCatPreview = document.getElementById('next-cat-preview');
         this.gameOverScreen = document.getElementById('game-over');
         this.startScreen = document.getElementById('start-screen');
+
+        // 初期バナー表示
+        this.updateDifficultyBanner();
         
         // ベストスコアを表示
         this.updateBestScoreDisplay();
         
-        // タッチコントローラーの初期化
-        this.touchController = new TouchController(this.canvas, (x) => this.dropCat(x));
+        // タッチコントローラーの初期化（ドロップラインの長さ計算を渡す）
+        this.touchController = new TouchController(
+            this.canvas,
+            (x) => this.dropCat(x),
+            (x) => this.getDropLineTargetY(x)
+        );
         
         // イベントリスナーの設定
         this.setupEventListeners();
         
         // キャンバスサイズの設定
         this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
+        if (this.touchController && this.touchController.onResize) {
+            this.touchController.onResize();
+        }
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
+            if (this.touchController && this.touchController.onResize) {
+                this.touchController.onResize();
+            }
+        });
         
         // 画像を読み込む
         this.loadImages().then(() => {
@@ -79,6 +94,31 @@ class CatDropGame {
         
         // ゲームループ開始
         this.startGameLoop();
+    }
+
+    // ドロップガイドラインの終点（最初の猫の上端 or 底）を返す
+    getDropLineTargetY(x) {
+        // x はキャンバス座標（0..canvas.width）
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        if (x < 0 || x > width) return height;
+
+        let minY = height; // 下端（猫が無ければ底まで）
+        for (const cat of this.droppingCats) {
+            const cx = cat.position.x;
+            const cy = cat.position.y;
+            const r = cat.circleRadius;
+            const dx = Math.abs(x - cx);
+            if (dx <= r) {
+                // 垂直線と円の交点（上側）
+                const dy = Math.sqrt(r * r - dx * dx);
+                const yTop = cy - dy;
+                if (yTop >= 0 && yTop < minY) {
+                    minY = yTop;
+                }
+            }
+        }
+        return minY;
     }
     
     async loadImages() {
@@ -180,9 +220,20 @@ class CatDropGame {
     }
     
     updateNextCatPreview() {
-        if (this.nextCatPreview && this.nextCat) {
-            this.nextCatPreview.innerHTML = this.nextCat.emoji;
+        if (!this.nextCatPreview || !this.nextCat) return;
+
+        const img = this.catImages[this.nextCat.id];
+        if (this.imagesLoaded && img) {
+            // 画像がある場合は画像を背景に表示
+            this.nextCatPreview.textContent = '';
+            this.nextCatPreview.style.backgroundImage = `url('${img.src}')`;
+            this.nextCatPreview.style.backgroundColor = 'transparent';
+            this.nextCatPreview.setAttribute('aria-label', this.nextCat.name || 'next-cat');
+        } else {
+            // 画像がない場合は絵文字と色で表示
+            this.nextCatPreview.style.backgroundImage = 'none';
             this.nextCatPreview.style.backgroundColor = this.nextCat.color;
+            this.nextCatPreview.textContent = this.nextCat.emoji;
         }
     }
     
@@ -511,6 +562,17 @@ class CatDropGame {
         const dangerLineElement = document.getElementById('danger-line');
         if (dangerLineElement) {
             dangerLineElement.style.top = `${settings.dangerLineMin}px`;
+        }
+
+        // バナーの難易度表記を更新
+        this.updateDifficultyBanner();
+    }
+
+    updateDifficultyBanner() {
+        const el = document.getElementById('banner-difficulty');
+        if (el) {
+            const settings = DIFFICULTY_SETTINGS[this.difficulty];
+            el.textContent = settings ? settings.name : '';
         }
     }
     

@@ -12,18 +12,22 @@
     <div id="game-container">
         <!-- ゲームエリア全体 -->
         <div id="game-area">
+            <!-- バナー -->
+            <div id="top-banner">🐾 ネコゲーム｜むずかしさ：<span id="banner-difficulty">ふつう</span></div>
             <!-- 上部UI -->
             <div id="top-ui">
                 <div class="ui-circle score-circle">
+                    <span class="ui-badge">👑</span>
                     <div class="ui-label">ベストスコア</div>
                     <div id="best-score">0</div>
                 </div>
                 <div class="ui-circle score-circle">
+                    <span class="ui-badge">⭐️</span>
                     <div class="ui-label">スコア</div>
                     <div id="score">0</div>
                 </div>
                 <div class="ui-circle next-circle">
-                    <div class="ui-label">ネクスト</div>
+                    <div class="ui-label">つぎ</div>
                     <div id="next-cat-preview"></div>
                 </div>
                 <button id="reset-btn" class="ui-circle control-btn">🔄</button>
@@ -54,16 +58,16 @@
                 
                 <!-- 難易度選択 -->
                 <div class="difficulty-selector">
-                    <h3>難易度を選択</h3>
+                    <h3>むずかしさをえらんでね</h3>
                     <div class="difficulty-buttons">
                         <button class="difficulty-btn" data-difficulty="easy">
-                            <span class="difficulty-name">🌟 簡単</span>
+                            <span class="difficulty-name">🌟 かんたん</span>
                         </button>
                         <button class="difficulty-btn active" data-difficulty="normal">
-                            <span class="difficulty-name">⭐ 普通</span>
+                            <span class="difficulty-name">⭐ ふつう</span>
                         </button>
                         <button class="difficulty-btn" data-difficulty="hard">
-                            <span class="difficulty-name">🔥 難しい</span>
+                            <span class="difficulty-name">🔥 むずかしい</span>
                         </button>
                     </div>
                 </div>
