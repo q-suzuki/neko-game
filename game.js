@@ -202,7 +202,8 @@ class CatDropGame {
         // 新しい壁を作成
         const thickness = 50;
         // iOSでの沈み込みを視覚的に防ぐため、床のトップをキャンバス内に0.5pxだけ入れる
-        const floorTop = this.canvas.height - 0.5;
+        const floorTop = this.canvas.height - 1.0; // さらに明確に視覚的余白を確保
+        this.floorTop = floorTop; // 後段のクランプで使用
         this.walls.bottom = Bodies.rectangle(
             this.canvas.width / 2,
             floorTop + thickness / 2,
@@ -229,6 +230,25 @@ class CatDropGame {
         
         // 壁を世界に追加
         World.add(this.world, [this.walls.bottom, this.walls.left, this.walls.right]);
+    }
+
+    // 物理解の後に最終的な床面での“めり込み”を補正（視覚と一致させる）
+    enforceFloorClamp() {
+        const { Body } = Matter;
+        const floorTop = (typeof this.floorTop === 'number') ? this.floorTop : (this.canvas.height - 1);
+        for (const cat of this.droppingCats) {
+            const radius = cat.circleRadius;
+            const bottom = cat.position.y + radius;
+            const overlap = bottom - floorTop;
+            if (overlap > 0) {
+                // y位置を床上にクランプ
+                Body.setPosition(cat, { x: cat.position.x, y: cat.position.y - overlap });
+                // 下向き速度をゼロに（跳ね戻り最小化）
+                if (cat.velocity.y > 0) {
+                    Body.setVelocity(cat, { x: cat.velocity.x, y: 0 });
+                }
+            }
+        }
     }
     
     prepareNextCat() {
@@ -488,6 +508,8 @@ class CatDropGame {
             if (!this.gameOver) {
                 // 物理エンジンの更新
                 Engine.update(this.engine, 1000 / 60);
+                // 床面での“めり込み”最終補正
+                this.enforceFloorClamp();
                 
                 // 描画
                 this.render();
