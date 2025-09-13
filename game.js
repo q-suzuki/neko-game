@@ -2,33 +2,38 @@
 const DIFFICULTY_SETTINGS = {
     easy: {
         name: 'かんたん',
-        dangerLinePercent: 0.10,  // 画面の10%（上＝スペース多い）
-        dangerLineMin: 80,         // 最小80px
-        dropCooldown: 300,         // 短い待機時間
-        gravity: 0.8,              // 統一した落下速度（少し速く）
-        maxDropLevel: 3            // Lv3までの猫が落ちる
+        // ラインは難易度に依存させず、Normal を使用（checkGameOver側で参照）
+        dangerLinePercent: 0.10,
+        dangerLineMin: 80,
+        dropCooldown: 300,
+        gravity: 0.8,
+        maxDropLevel: 3,          // ドロッププール（従来どおり）
+        maxAllowedLevel: 7        // 出現可能（合体含む）な最大レベル
     },
     normal: {
         name: 'ふつう',
-        dangerLinePercent: 0.15,  // 画面の15%（中間）
-        dangerLineMin: 100,        // 最小100px
-        dropCooldown: 500,         // 標準待機時間
-        gravity: 0.8,              // 統一した落下速度（少し速く）
-        maxDropLevel: 5            // Lv5までの猫が落ちる
+        dangerLinePercent: 0.15,
+        dangerLineMin: 100,
+        dropCooldown: 500,
+        gravity: 0.8,
+        maxDropLevel: 5,
+        maxAllowedLevel: 9
     },
     hard: {
         name: 'むずかしい',
-        dangerLinePercent: 0.25,  // 画面の25%（下＝スペース少ない）
-        dangerLineMin: 150,        // 最小150px
-        dropCooldown: 700,         // 長い待機時間
-        gravity: 0.8,              // 統一した落下速度（少し速く）
-        maxDropLevel: 5            // Lv5までの猫が落ちる
+        dangerLinePercent: 0.25,
+        dangerLineMin: 150,
+        dropCooldown: 700,
+        gravity: 0.8,
+        maxDropLevel: 5,
+        maxAllowedLevel: 11
     }
 };
 
 // 描画と境界の見た目安定用の定数
 const RENDER_OUTLINE_WIDTH = 2;     // 円の外周ストローク幅(px)
-const EDGE_VISUAL_INSET = 2;        // 見た目上の内側余白（ボーダーに“めり込まない”ため）
+const RENDER_INNER_PADDING = 0;     // 視覚ギャップを最小化しつつ内側ストローク
+const EDGE_VISUAL_INSET = 2;        // 見た目上の内側余白（壁のボーダー考慮）
 
 // ゲームのメインロジック
 class CatDropGame {
@@ -55,6 +60,12 @@ class CatDropGame {
         this.nextCatPreview = document.getElementById('next-cat-preview');
         this.gameOverScreen = document.getElementById('game-over');
         this.startScreen = document.getElementById('start-screen');
+
+        // 危険ラインの初期位置を Normal に合わせる
+        const initDanger = document.getElementById('danger-line');
+        if (initDanger) {
+            initDanger.style.top = `${DIFFICULTY_SETTINGS.normal.dangerLineMin}px`;
+        }
 
         // 初期バナー表示
         this.updateDifficultyBanner();
@@ -168,10 +179,12 @@ class CatDropGame {
         
         // エンジンの作成
         this.engine = Engine.create();
+        // 安定性重視のチューニング
+        this.engine.enableSleeping = true;    // 静止体のスリープを有効化
         // 交差のめり込み軽減（特にモバイルSafari）
-        this.engine.positionIterations = 12; // 既定6 → 12
-        this.engine.velocityIterations = 8;  // 既定4 → 8
-        this.engine.constraintIterations = 4; // 既定2 → 4
+        this.engine.positionIterations = 16; // 既定6 → 16（解像度アップ）
+        this.engine.velocityIterations = 12; // 既定4 → 12（速度解像度アップ）
+        this.engine.constraintIterations = 6; // 既定2 → 6
         this.world = this.engine.world;
         
         // 重力の設定（難易度に応じて調整）
@@ -216,7 +229,7 @@ class CatDropGame {
             // 左右も inset を考慮して少し内側に（見た目の“壁”と一致させる）
             this.canvas.width - inset * 2 + thickness * 2,
             thickness,
-            { isStatic: true, label: 'wall', slop: 0.005 } // slopをさらに小さく
+            { isStatic: true, label: 'wall', slop: 0.002 }
         );
 
         this.walls.left = Bodies.rectangle(
@@ -224,7 +237,7 @@ class CatDropGame {
             this.canvas.height / 2,
             thickness,
             this.canvas.height - inset,
-            { isStatic: true, label: 'wall', slop: 0.005 }
+            { isStatic: true, label: 'wall', slop: 0.002 }
         );
 
         this.walls.right = Bodies.rectangle(
@@ -232,7 +245,7 @@ class CatDropGame {
             this.canvas.height / 2,
             thickness,
             this.canvas.height - inset,
-            { isStatic: true, label: 'wall', slop: 0.005 }
+            { isStatic: true, label: 'wall', slop: 0.002 }
         );
 
         // 壁を世界に追加
@@ -297,6 +310,8 @@ class CatDropGame {
     
     prepareNextCat() {
         const difficulty = DIFFICULTY_SETTINGS[this.difficulty];
+        // ドロップは設定上限まで（従来どおり）。
+        // ただし“出現可能な最大レベル”は別途マージ処理側で制御。
         this.nextCat = getRandomDropCat(difficulty.maxDropLevel);
         this.updateNextCatPreview();
     }
@@ -326,13 +341,17 @@ class CatDropGame {
         
         // 猫の物理ボディを作成
         const cat = Bodies.circle(x, 10, this.nextCat.radius, {  // 上部から落下
-            restitution: 0.1,   // 弾性を下げて跳ね戻りを抑制
-            friction: 0.6,      // 摩擦を上げて安定性向上
+            // 過剰な“引っかかり”を抑え、自然に落ち着く値へ調整
+            restitution: 0.04,
+            friction: 0.8,
+            frictionStatic: 0.9,
             frictionAir: 0.02,
-            slop: 0.005,        // めり込み許容量をさらに小さく
-            density: 0.001,     // 密度
+            // ごく小さな“めり込み”を許容して解像度を安定化
+            slop: 0.002,
+            density: 0.0014,
             label: 'cat',
-            catData: this.nextCat
+            catData: this.nextCat,
+            sleepThreshold: 40
         });
         
         // 世界に追加
@@ -368,12 +387,13 @@ class CatDropGame {
                 
                 // 同じレベルの猫かチェック
                 if (catDataA && catDataB && catDataA.id === catDataB.id) {
-                    if (catDataA.id < CAT_DATA.length) {
-                        // 通常の合体
-                        this.mergeCats(bodyA, bodyB);
-                    } else if (catDataA.id === CAT_DATA.length) {
-                        // 最大レベル同士の特別処理
+                    const maxAllowed = DIFFICULTY_SETTINGS[this.difficulty]?.maxAllowedLevel || CAT_DATA.length;
+                    if (catDataA.id >= maxAllowed) {
+                        // 難易度ごとの“最大レベル”に達したら特別処理（消える＋ボーナス）
                         this.mergeMaxLevelCats(bodyA, bodyB);
+                    } else {
+                        // まだ上がある場合は通常合体
+                        this.mergeCats(bodyA, bodyB);
                     }
                 }
             }
@@ -398,18 +418,23 @@ class CatDropGame {
         
         // 新しい猫を作成
         const newCat = Bodies.circle(x, y, nextCat.radius, {
-            restitution: 0.1,  // 合体後も跳ねすぎ防止
-            friction: 0.6,     // 安定性向上
+            restitution: 0.04,
+            friction: 0.8,
+            frictionStatic: 0.9,
             frictionAir: 0.02,
-            slop: 0.005,       // めり込み許容量を小さく
-            density: 0.001,
+            slop: 0.002,
+            density: 0.0014,
             label: 'cat',
-            catData: nextCat
+            catData: nextCat,
+            sleepThreshold: 40
         });
         
         // 世界に追加
         World.add(this.world, newCat);
         this.droppingCats.push(newCat);
+
+        // 近傍の眠っている物体を起こし、重なりを軽減
+        this.postMergeSettle(newCat);
         
         // スコア加算
         this.addScore(nextCat.score);
@@ -430,11 +455,62 @@ class CatDropGame {
         World.remove(this.world, bodyB);
         this.droppingCats = this.droppingCats.filter(cat => cat !== bodyA && cat !== bodyB);
         
+        // 周囲のボディを起こし、微小な下向き速度を与えて“浮き”を防止
+        this.wakeNearbyBodies({ x, y }, 180);
+
         // 大量ボーナススコア
         this.addScore(100);
         
         // 特別なエフェクト
         this.showMaxLevelMergeEffect(x, y);
+    }
+
+    // マージ直後の重なり解消とウェイク
+    postMergeSettle(newCat) {
+        const { Body } = Matter;
+        // 近傍の眠っているボディを起こす
+        this.wakeNearbyBodies(newCat.position, newCat.circleRadius + 160);
+
+        // 簡易重なり解消（数回反復）
+        const iterations = 3;
+        for (let it = 0; it < iterations; it++) {
+            for (const other of this.droppingCats) {
+                if (other === newCat) continue;
+                const dx = other.position.x - newCat.position.x;
+                const dy = other.position.y - newCat.position.y;
+                let dist = Math.hypot(dx, dy);
+                const minDist = (other.circleRadius || 0) + (newCat.circleRadius || 0) + 0.5;
+                if (dist === 0) {
+                    // 完全に重なっている場合は小さくずらす
+                    dist = 0.001;
+                }
+                if (dist < minDist) {
+                    const overlap = minDist - dist;
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    // 双方を少しずつ離す（質量保存は気にしない軽微な補正）
+                    Body.translate(other, { x: nx * overlap * 0.60, y: ny * overlap * 0.60 });
+                    Body.translate(newCat, { x: -nx * overlap * 0.40, y: -ny * overlap * 0.40 });
+                }
+            }
+        }
+    }
+
+    // 周囲のボディを起こし、わずかな下向き速度を与える
+    wakeNearbyBodies(center, radius) {
+        const { Body } = Matter;
+        const rsq = radius * radius;
+        for (const b of this.droppingCats) {
+            const dx = b.position.x - center.x;
+            const dy = b.position.y - center.y;
+            if (dx * dx + dy * dy <= rsq) {
+                if (Matter.Sleeping && typeof Matter.Sleeping.set === 'function') {
+                    Matter.Sleeping.set(b, false);
+                }
+                // わずかに下向きへ（浮遊抑制）
+                Body.setVelocity(b, { x: b.velocity.x, y: Math.max(b.velocity.y, 0.15) });
+            }
+        }
     }
     
     showMergeEffect(x, y) {
@@ -518,9 +594,9 @@ class CatDropGame {
     }
     
     checkGameOver() {
-        // 危険ラインの高さ（難易度に応じて調整）
-        const difficulty = DIFFICULTY_SETTINGS[this.difficulty];
-        const dangerLine = Math.max(difficulty.dangerLineMin, this.canvas.height * difficulty.dangerLinePercent);
+        // 危険ラインは難易度に関係なく Normal のラインを採用
+        const base = DIFFICULTY_SETTINGS.normal;
+        const dangerLine = Math.max(base.dangerLineMin, this.canvas.height * base.dangerLinePercent);
         
         for (const cat of this.droppingCats) {
             // より厳格な静止判定：速度と角速度の両方をチェック
@@ -552,10 +628,9 @@ class CatDropGame {
             if (!this.gameOver) {
                 // 物理エンジンの更新
                 Engine.update(this.engine, 1000 / 60);
-                // 床面での“めり込み”最終補正
-                this.enforceFloorClamp();
-                // 左右の“めり込み”も補正
-                this.enforceSideClamp();
+                // iPhone向けの手動クランプは無効化（揺れの原因）
+                // 転がり減衰を軽く付与（過度な回転→滑りを抑制）
+                this.applyRollingDamping();
                 
                 // 描画
                 this.render();
@@ -565,6 +640,18 @@ class CatDropGame {
         };
         
         gameLoop();
+    }
+
+    // 緩やかな回転減衰（“つるつる”感の抑制）
+    applyRollingDamping() {
+        const { Body } = Matter;
+        for (const cat of this.droppingCats) {
+            // 過度な回転を徐々に弱める（速度が低い時のみ）
+            const linSpeed = Math.hypot(cat.velocity.x, cat.velocity.y);
+            if (linSpeed < 2 && Math.abs(cat.angularVelocity) > 0.02) {
+                Body.setAngularVelocity(cat, cat.angularVelocity * 0.90);
+            }
+        }
     }
     
     render() {
@@ -580,6 +667,8 @@ class CatDropGame {
             const x = cat.position.x;
             const y = cat.position.y;
             const radius = cat.circleRadius;
+            const strokeW = RENDER_OUTLINE_WIDTH;
+            const drawRadius = Math.max(2, radius - strokeW * 0.5 - RENDER_INNER_PADDING);
             const catData = cat.catData;
             
             // 画像がある場合は画像を描画、なければ絵文字
@@ -591,7 +680,7 @@ class CatDropGame {
                 
                 // 円形クリッピングパスを作成
                 this.ctx.beginPath();
-                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.arc(x, y, drawRadius, 0, Math.PI * 2);
                 this.ctx.clip();
                 
                 // 回転を適用（物理演算の角度に合わせる）
@@ -599,11 +688,11 @@ class CatDropGame {
                 this.ctx.rotate(cat.angle);
                 
                 // 画像を描画（中心を原点に）
-                const imageSize = radius * 2;
+                const imageSize = drawRadius * 2;
                 this.ctx.drawImage(
                     catImage,
-                    -radius,
-                    -radius,
+                    -drawRadius,
+                    -drawRadius,
                     imageSize,
                     imageSize
                 );
@@ -612,25 +701,25 @@ class CatDropGame {
                 
                 // 輪郭を描画
                 this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-                this.ctx.lineWidth = 2;
+                this.ctx.lineWidth = strokeW;
                 this.ctx.beginPath();
-                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.arc(x, y, drawRadius, 0, Math.PI * 2);
                 this.ctx.stroke();
             } else {
                 // 画像がない場合は絵文字で代替
                 // 円を描画
                 this.ctx.fillStyle = catData.color;
                 this.ctx.beginPath();
-                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.arc(x, y, drawRadius, 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 // 輪郭
                 this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-                this.ctx.lineWidth = 2;
+                this.ctx.lineWidth = strokeW;
                 this.ctx.stroke();
                 
                 // 絵文字を描画
-                this.ctx.font = `${radius * 1.5}px sans-serif`;
+                this.ctx.font = `${drawRadius * 1.5}px sans-serif`;
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
                 this.ctx.fillText(catData.emoji, x, y);
@@ -648,10 +737,11 @@ class CatDropGame {
             this.engine.gravity.y = settings.gravity;
         }
         
-        // 危険ラインの位置を更新（CSSも更新）
+        // 危険ラインの位置を更新（CSSも常に Normal 基準）
         const dangerLineElement = document.getElementById('danger-line');
         if (dangerLineElement) {
-            dangerLineElement.style.top = `${settings.dangerLineMin}px`;
+            const normalLinePx = DIFFICULTY_SETTINGS.normal.dangerLineMin;
+            dangerLineElement.style.top = `${normalLinePx}px`;
         }
 
         // バナーの難易度表記を更新
