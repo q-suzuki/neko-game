@@ -202,8 +202,23 @@ class CatDropGame {
 
         // 新しい壁を作成
         const thickness = 50;
-        // iPhone対応：適度な余裕を持たせて床境界を設定
-        const floorBuffer = 3; // 少しだけ余裕を持たせる（3px）
+        // デバイス固有の表示差異を考慮した床境界設定
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        // デバイスタイプとピクセル密度に応じて調整
+        let floorBuffer;
+        if (isMobile && devicePixelRatio >= 2) {
+            // iPhone/iPadなど高DPIモバイル：より厳密に
+            floorBuffer = 2;
+        } else if (isMobile) {
+            // 低DPIモバイル
+            floorBuffer = 2.5;
+        } else {
+            // PCブラウザ：少し余裕を持たせる
+            floorBuffer = 1.5;
+        }
+
         const floorTop = this.canvas.height - floorBuffer;
         this.floorTop = floorTop;
         this.walls.bottom = Bodies.rectangle(
@@ -237,8 +252,24 @@ class CatDropGame {
     // 物理解の後に最終的な床面での"めり込み"を補正（視覚と一致させる）
     enforceFloorClamp() {
         const { Body } = Matter;
-        // 視覚境界：キャンバスの底部から1px上
-        const visualFloorY = this.canvas.height - 1;
+
+        // デバイス固有の視覚境界調整
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        let visualBuffer;
+        if (isMobile && devicePixelRatio >= 2) {
+            // iPhone/iPadなど高DPIモバイル：ピクセルパーフェクト
+            visualBuffer = 0.5;
+        } else if (isMobile) {
+            // 低DPIモバイル
+            visualBuffer = 1;
+        } else {
+            // PCブラウザ：少し余裕
+            visualBuffer = 0.8;
+        }
+
+        const visualFloorY = this.canvas.height - visualBuffer;
 
         for (const cat of this.droppingCats) {
             const radius = cat.circleRadius;
