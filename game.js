@@ -29,7 +29,7 @@ const DIFFICULTY_SETTINGS = {
         dropWeights: { 1: 6, 2: 4, 3: 3, 4: 2, 5: 1 }
     },
     paradise: {
-        name: 'ねこ天国',
+        name: 'ねこパラダイス',
         dropCooldown: 300,
         gravity: 0.8,
         // Lv6 はデフォ重みが 0 のため 5 に統一

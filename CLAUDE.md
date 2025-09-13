@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Japanese "Cat Drop Game" (ネコゲーム) inspired by Suika Game mechanics. Players drop cats that merge when identical levels collide, creating larger cats and earning points.
+This is a Japanese "Cat Drop Game" (ねこゲーム) inspired by Suika Game mechanics. Players drop cats that merge when identical levels collide, creating larger cats and earning points.
 
 ## Development Commands
 
