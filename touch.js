@@ -1,6 +1,34 @@
-// タッチ操作管理
+/**
+ * タッチ操作管理クラス
+ * @file touch.js - Touch and mouse input controller for the cat drop game
+ */
+
+// アニメーション関連の定数
+const SMOOTH_FACTOR = 0.35; // 0..1 大きいほど追従が速い
+const POSITION_THRESHOLD = 0.4; // 位置の差分闾値
+const HEIGHT_THRESHOLD = 0.6; // 高さの差分闾値
+const DOUBLE_TAP_THRESHOLD = 300; // ダブルタップ防止の闾値(ms)
+
+/**
+ * タッチ操作管理クラス
+ * タッチ・マウス入力を処理し、ドロップラインを表示する
+ */
 class TouchController {
+    /**
+     * TouchControllerのコンストラクタ
+     * @param {HTMLCanvasElement} canvas - ゲームキャンバス
+     * @param {Function} onDrop - ドロップコールバック関数
+     * @param {Function|null} getObstacleY - 障害物のY座標を取得する関数
+     */
     constructor(canvas, onDrop, getObstacleY) {
+        // 入力検証
+        if (!canvas || !(canvas instanceof HTMLCanvasElement)) {
+            throw new Error('Valid canvas element is required');
+        }
+        if (typeof onDrop !== 'function') {
+            throw new Error('onDrop callback function is required');
+        }
+
         this.canvas = canvas;
         this.onDrop = onDrop;
         this.getObstacleY = getObstacleY || null;
@@ -187,9 +215,8 @@ class TouchController {
         if (this.animHeight == null) this.animHeight = destHeight;
 
         // LERP で滑らかに追従
-        const SMOOTH = 0.35; // 0..1 大きいほど追従が速い
-        this.animLeft += (targetLeft - this.animLeft) * SMOOTH;
-        this.animHeight += (destHeight - this.animHeight) * SMOOTH;
+        this.animLeft += (targetLeft - this.animLeft) * SMOOTH_FACTOR;
+        this.animHeight += (destHeight - this.animHeight) * SMOOTH_FACTOR;
 
         // DOM 反映
         this.dropLine.style.left = `${this.animLeft}px`;
@@ -197,7 +224,8 @@ class TouchController {
         this.dropLine.style.height = `${this.animHeight}px`;
 
         // 続行判定（十分近づくまでアニメーション）
-        const cont = Math.abs(targetLeft - this.animLeft) > 0.4 || Math.abs(destHeight - this.animHeight) > 0.6;
+        const cont = Math.abs(targetLeft - this.animLeft) > POSITION_THRESHOLD ||
+                    Math.abs(destHeight - this.animHeight) > HEIGHT_THRESHOLD;
         if (cont) this.requestTick();
     }
 }
@@ -215,7 +243,7 @@ function preventDefaultTouches() {
     let lastTouchEnd = 0;
     document.addEventListener('touchend', (e) => {
         const now = Date.now();
-        if (now - lastTouchEnd <= 300) {
+        if (now - lastTouchEnd <= DOUBLE_TAP_THRESHOLD) {
             e.preventDefault();
         }
         lastTouchEnd = now;

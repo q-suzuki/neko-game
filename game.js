@@ -1,3 +1,17 @@
+/**
+ * ゲームメインクラス - Cat Drop Game
+ * @file game.js - Core game logic and physics management
+ */
+
+// パフォーマンス最適化用の定数
+const RENDER_OPTIMIZATION = {
+    MAX_PARTICLES: 50,           // 最大パーティクル数
+    PARTICLE_POOL_SIZE: 100,     // パーティクルプールサイズ
+    COLLISION_SKIP_FRAMES: 2,    // 衝突検出をスキップするフレーム数
+    PHYSICS_TIMESTEP: 1000/60,   // 物理シミュレーションのタイムステップ
+    CANVAS_BUFFER_SIZE: 2        // キャンバスバッファのサイズ倍率
+};
+
 // 難易度設定
 const DIFFICULTY_SETTINGS = {
     easy: {
@@ -48,21 +62,36 @@ const DANGER_EPS = 0.5;             // 危険ライン判定の微小誤差吸�
 const SETTLE_REQUIRED_MS = 100;     // ライン上での連続静止必要時間
 const DANGER_LINE_PX = 100;         // 全難易度で統一する判定ライン（px）
 
-// ゲームのメインロジック
+/**
+ * ゲームのメインロジッククラス
+ * 物理エンジン、レンダリング、ゲーム状態を管理する
+ */
 class CatDropGame {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
+
+        // ゲーム状態
         this.score = 0;
-        this.bestScore = this.loadBestScore(this.difficulty);
         this.gameOver = false;
         this.nextCat = null;
         this.droppingCats = [];
         this.canDrop = true;
         this.difficulty = 'normal';  // デフォルト難易度
         this.dropCooldown = DIFFICULTY_SETTINGS.normal.dropCooldown;
+
+        // 画像関連
         this.catImages = {}; // 猫画像を格納
         this.imagesLoaded = false;
+
+        // パフォーマンス最適化用
+        this.frameSkipCounter = 0;
+        this.particlePool = [];
+        this.activeParticles = [];
+        this.lastRenderTime = 0;
+
+        // ベストスコアを遅延読み込み（constructorでthis.difficultyが確定してから）
+        this.bestScore = 0;
         
         // Matter.js の初期化
         this.initPhysics();
@@ -84,13 +113,14 @@ class CatDropGame {
             initDanger.style.top = `${DANGER_LINE_PX}px`;
         }
 
-        // 初期バナー表示
-        this.updateDifficultyBanner();
-        
-        // ベストスコアを表示
-        this.updateBestScoreDisplay();
-        // 難易度選択横の出現数/ベストスコアを初期表示
-        this.updateDifficultyMeta();
+        // パーティクルプールの初期化
+        this.initializeParticlePool();
+
+        // 初期化処理
+        this.initializeUI();
+
+        // ベストスコアを正しく読み込み
+        this.bestScore = this.loadBestScore(this.difficulty);
         
         // タッチコントローラーの初期化（ドロップラインの長さ計算を渡す）
         this.touchController = new TouchController(
@@ -227,6 +257,34 @@ class CatDropGame {
         }
         
         await Promise.all(loadPromises);
+    }
+
+    /**
+     * パーティクルプールを初期化（メモリ効率化）
+     */
+    initializeParticlePool() {
+        for (let i = 0; i < RENDER_OPTIMIZATION.PARTICLE_POOL_SIZE; i++) {
+            this.particlePool.push({
+                x: 0, y: 0, vx: 0, vy: 0,
+                life: 0, maxLife: 0,
+                color: '#ffffff', size: 1,
+                active: false
+            });
+        }
+    }
+
+    /**
+     * UI要素の初期化を統合
+     */
+    initializeUI() {
+        // 初期バナー表示
+        this.updateDifficultyBanner();
+
+        // ベストスコアを表示
+        this.updateBestScoreDisplay();
+
+        // 難易度選択横の出現数/ベストスコアを初期表示
+        this.updateDifficultyMeta();
     }
     
     initPhysics() {
@@ -393,9 +451,22 @@ class CatDropGame {
         }
     }
     
+    /**
+     * 猫を指定位置にドロップする
+     * @param {number} x - ドロップするX座標
+     */
     dropCat(x) {
-        if (!this.canDrop || this.gameOver || !this.nextCat) return;
-        
+        // バリデーション
+        if (!this.canDrop || this.gameOver || !this.nextCat) {
+            console.warn('Cannot drop cat: canDrop=', this.canDrop, 'gameOver=', this.gameOver, 'nextCat=', !!this.nextCat);
+            return;
+        }
+
+        if (typeof x !== 'number' || x < 0 || x > this.canvas.width) {
+            console.warn('Invalid drop position:', x);
+            x = Math.max(0, Math.min(this.canvas.width, x));
+        }
+
         const { Bodies, World } = Matter;
         
         // 猫の物理ボディを作成
